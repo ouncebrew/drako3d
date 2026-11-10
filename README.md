@@ -1,8 +1,6 @@
-# 凸 deko3d ( ͡° ͜ʖ ͡°)
+# drako3d
 
-![deko3d logo](res/logo-300w.png)
-
-deko3d is a brand new homebrew low level 3D graphics API targetting the Nvidia Tegra X1 processor found inside the Nintendo Switch. It provides the following features:
+drako3d is a brand new homebrew low level 3D graphics API targetting the Nvidia Tegra T239 processor found inside the Nintendo Switch 2. It is based on [deko3d](https://github.com/devkitPro/deko3d). Drako3d provides the following features:
 
 - Low level and explicit API reminiscent of Vulkan®: deko3d is modeled after popular low level concepts such as devices, queues, command buffers, and much more. deko3d thus provides a window into the inner workings of the GPU.
 - Low overhead and explicit resource management: deko3d lets developers take control of resource management, and make decisions that make most sense in each case. In addition, care was taken to avoid unnecessary dynamic memory allocations and other undesired behavior that can result in degraded application performance.
@@ -90,16 +88,17 @@ In its current form, deko3d provides support for around 80% of most common hardw
 
 ## Credits and acknowledgements
 
-deko3d is presently developed and maintained by **fincs**.<br>
+drako3d is presently developed and maintained by **PalindromicBreadLoaf**.<br>
 In no particular order, I would like to credit the following people:
-
+- [fincs](https://github.com/fincs) from [devkitPro](https://devkitpro.org/) for creating deko3d, the basis of drako3d. Without him this project wouldn't exist and I wouldn't be where I am.
+- [souldbminer](https://github.com/souldbminerr) from [Horizon OC](https://github.com/Horizon-OC) for overall being supportive and getting me further into this whole mess :).
 - [WinterMute](https://github.com/WinterMute) from [devkitPro](https://devkitpro.org/) for making the homebrew dream a reality through their incredible toolchains and ecosystem.
 - [plutoo](https://github.com/plutooo) from [switchbrew](https://github.com/switchbrew) for kickstarting GPU and NVN reverse engineering efforts.
 - [SciresM](https://github.com/SciresM) and [hexkyz](https://github.com/hexkyz) from the [Atmosphère](https://github.com/Atmosphere-NX) project for their invaluable contributions in the reverse engineering of Horizon OS.
 - [Rodrigo](https://github.com/ReinUsesLisp) and [Blinkhawk](https://github.com/FernandoS27) from the [yuzu](https://github.com/yuzu-emu) project for tirelessly listening to my rants and assisting me with feedback and GPU knowledge.
 - [Thog](https://github.com/Thog) and [gdkchan](https://github.com/gdkchan) from the [Ryujinx](https://github.com/Ryujinx) project for tirelessly listening to my rants and assisting me with feedback and GPU knowledge.
 
-In addition, deko3d would have never been a thing without these organizations:
+In addition, drako3d would have never been a thing without these organizations:
 
 - [NVIDIA](https://github.com/NVIDIA) for designing and creating the Tegra X1 GPU, as well as the NVN API.
 - [Nintendo](https://github.com/Nintendo) for designing and creating Horizon OS.
