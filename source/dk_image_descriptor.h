@@ -1,6 +1,6 @@
 #include "dk_image.h"
 
-#include "maxwell/texture_image_control_block.h"
+#include "texture_image_control_block.h"
 
 namespace dk::detail
 {

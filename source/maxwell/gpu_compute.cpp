@@ -4,6 +4,7 @@
 #include "../cmdbuf_writer.h"
 
 #include "engine_compute.h"
+#include <spa_version.h>
 
 using namespace maxwell;
 using namespace dk::detail;
@@ -53,7 +54,7 @@ void ComputeQueue::initComputeEngine()
 	w << Cmd(Compute, SetShaderSharedMemoryWindow{}, 0x03000000);
 	w << Cmd(Compute, SetProgramRegion{}, Iova(dev->getCodeSeg().getBase()));
 	w << CmdInline(Compute, SetSpaVersion{},
-		C::SetSpaVersion::Major{5} | C::SetSpaVersion::Minor{3} // SM 5.3
+		C::SetSpaVersion::Major{SpaVersionMajor} | C::SetSpaVersion::Minor{SpaVersionMinor}
 	);
 	w << Cmd(Compute, SetShaderLocalMemory{}, Iova(scratchMemIova));
 	w << Cmd(Compute, SetShaderLocalMemoryNonThrottledA{},

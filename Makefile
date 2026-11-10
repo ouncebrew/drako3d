@@ -6,8 +6,6 @@ ifeq ($(strip $(DEVKITPRO)),)
 $(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>/devkitpro")
 endif
 
-include $(DEVKITPRO)/libnx/switch_rules
-
 export DEKO3D_MAJOR	:= 0
 export DEKO3D_MINOR	:= 5
 export DEKO3D_PATCH	:= 0
@@ -16,15 +14,33 @@ export DEKO3D_PATCH	:= 0
 VERSION	:=	$(DEKO3D_MAJOR).$(DEKO3D_MINOR).$(DEKO3D_PATCH)
 
 #---------------------------------------------------------------------------------
+# GPU_ARCH selects the target GPU (ampere [GA10F, Switch 2] or maxwell [GM20B, Switch 1])
+# Run "make clean" after switching
+# The ampere build uses libounce ($(DEVKITPRO)/libounce) instead of libnx
+#---------------------------------------------------------------------------------
+GPU_ARCH	?=	ampere
+
+ifeq ($(GPU_ARCH),ampere)
+include $(DEVKITPRO)/libounce/switch2_rules
+GPU_DIRS	:=	source/ampere source/maxwell
+GPU_DEFINES	:=	-DDK_GPU_AMPERE=1
+else ifeq ($(GPU_ARCH),maxwell)
+include $(DEVKITPRO)/libnx/switch_rules
+GPU_DIRS	:=	source/maxwell
+else
+$(error "Unknown GPU_ARCH '$(GPU_ARCH)', expected ampere or maxwell")
+endif
+
+#---------------------------------------------------------------------------------
 # BUILD is the directory where object files & intermediate files will be placed
 # SOURCES is a list of directories containing source code
 # DATA is a list of directories containing data files
 # INCLUDES is a list of directories containing header files
 #---------------------------------------------------------------------------------
 #BUILD		:=	build
-SOURCES		:=	source source/maxwell
+SOURCES		:=	$(GPU_DIRS) source
 DATA		:=	data
-INCLUDES	:=	include
+INCLUDES	:=	include $(GPU_DIRS) source
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -38,7 +54,7 @@ CFLAGS	:=	-g -Wall -Werror \
 			$(ARCH) \
 			$(BUILD_CFLAGS)
 
-CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -D__DK_INTERNAL__
+CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -D__DK_INTERNAL__ $(GPU_DEFINES)
 
 # Extra optimizations for the Release build. This list is equivalent to -O3,
 # with opts that hurt code size (i.e. aggressive loop unrolling) disabled.
@@ -74,11 +90,14 @@ export TOPDIR	:=	$(CURDIR)
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 			$(foreach dir,$(DATA),$(CURDIR)/$(dir))
 
-CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-DEFFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.def)))
-MMEFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.mme)))
+CFILES		:=	$(sort $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c))))
+CPPFILES	:=	$(sort $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp))))
+SFILES		:=	$(sort $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s))))
+DEFFILES	:=	$(sort $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.def))))
+MMEFILES	:=	$(sort $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.mme))))
+ifeq ($(GPU_ARCH),ampere)
+MMEFILES	:=
+endif
 BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
 
 #---------------------------------------------------------------------------------
@@ -102,6 +121,10 @@ export HFILES	:=	$(addsuffix .h,$(subst .,_,$(BINFILES))) $(DEFFILES:.def=.h)
 ifneq ($(strip $(MMEFILES)),)
 export HFILES	+=	mme_macros.h
 export MMEFILES
+endif
+ifeq ($(GPU_ARCH),ampere)
+export HFILES	+=	method_names.h
+export DEFFILES
 endif
 
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
@@ -176,6 +199,10 @@ mme_macros.h : engine_3d.mme $(MMEFILES)
 %.h : %.def
 	@echo $(notdir $<)
 	@dekodef -h $@ $<
+
+method_names.h : $(DEFFILES) method_names_gen.py
+	@echo $(notdir $@)
+	@python3 $(filter %.py,$^) -o $@ $(filter %.def,$^)
 
 #---------------------------------------------------------------------------------
 %_bin.h %.bin.o	:	%.bin

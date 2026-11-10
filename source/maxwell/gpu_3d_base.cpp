@@ -6,9 +6,10 @@
 
 #include "mme_macros.h"
 #include "engine_3d.h"
+#include <spa_version.h>
 
 #include "../driver_constbuf.h"
-#include "texture_image_control_block.h"
+#include "texture_image_control_types.h"
 
 using namespace maxwell;
 using namespace dk::detail;
@@ -96,7 +97,7 @@ void Queue::setup3DEngine()
 	w << CmdInline(3D, StencilTwoSideEnable{}, 1);
 	w << CmdInline(3D, SetBindlessTexture{}, 0); // Using constbuf0 as the texture constbuf
 	w << CmdInline(3D, SetSpaVersion{},
-		E::SetSpaVersion::Major{5} | E::SetSpaVersion::Minor{3} // SM 5.3
+		E::SetSpaVersion::Major{SpaVersionMajor} | E::SetSpaVersion::Minor{SpaVersionMinor}
 	);
 	w << Cmd(3D, SetShaderLocalMemoryWindow{}, 0x01000000);
 	w << Cmd(3D, SetShaderLocalMemory{}, Iova(m_workBuf.getScratchMem()), Iova(m_workBuf.getScratchMemSize()));

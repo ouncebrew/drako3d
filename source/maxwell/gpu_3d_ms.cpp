@@ -5,7 +5,7 @@
 #include "engine_3d.h"
 
 #include "../driver_constbuf.h"
-#include "texture_image_control_block.h"
+#include "texture_image_control_types.h"
 
 using namespace maxwell;
 using namespace dk::detail;

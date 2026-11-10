@@ -2,7 +2,7 @@
 
 #include "dk_device.h"
 #include "driver_constbuf.h"
-#include "maxwell/compute_qmd.h"
+#include "compute_qmd.h"
 
 using namespace dk::detail;
 
