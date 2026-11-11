@@ -57,6 +57,7 @@ Result registerMemory(void* addr, u32 size, bool cpuCached, u32& rangeId) noexce
 void unregisterMemory(void* addr, u32 size, bool cpuCached, u32 rangeId) noexcept;
 Result mapMemory(u32 rangeId, u64 offset, DkGpuAddr va, u64 size, bool gpuCached) noexcept;
 void unmapMemory(DkGpuAddr va, u64 size) noexcept;
+Result changeKind(DkGpuAddr va, u64 size, u8 kind, u8& appliedKind) noexcept;
 
 // Fence ids are GSV producer ids
 Result fenceWait(NvFence const& fence, s32 timeout_us) noexcept;

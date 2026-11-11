@@ -6,6 +6,54 @@ using namespace dk::detail;
 
 namespace
 {
+	constexpr u8 s_pteKindZ16 = 0x01;
+	constexpr u8 s_pteKindS8 = 0x02;
+	constexpr u8 s_pteKindS8Z24 = 0x03;
+	constexpr u8 s_pteKindZF32X24S8 = 0x04;
+	constexpr u8 s_pteKindZ24S8 = 0x05;
+	constexpr u8 s_pteKindGeneric = 0x06;
+
+	// Turing+ page kinds have no compression variants per sample count
+	u8 pickPteKind(NvKind kind)
+	{
+		switch (kind)
+		{
+			case NvKind_Z16:
+			case NvKind_Z16_2C:
+			case NvKind_Z16_2Z:
+			case NvKind_Z16_MS2_2C:
+			case NvKind_Z16_MS2_2Z:
+			case NvKind_Z16_MS4_2C:
+			case NvKind_Z16_MS4_2Z:
+			case NvKind_Z16_MS8_2C:
+			case NvKind_Z16_MS8_2Z:
+				return s_pteKindZ16;
+			case NvKind_S8:
+			case NvKind_S8_2S:
+				return s_pteKindS8;
+			case NvKind_S8Z24:
+			case NvKind_S8Z24_2CZ:
+			case NvKind_S8Z24_MS2_2CZ:
+			case NvKind_S8Z24_MS4_2CZ:
+			case NvKind_S8Z24_MS8_2CZ:
+				return s_pteKindS8Z24;
+			case NvKind_Z24S8:
+			case NvKind_Z24S8_2CZ:
+			case NvKind_Z24S8_MS2_2CZ:
+			case NvKind_Z24S8_MS4_2CZ:
+			case NvKind_Z24S8_MS8_2CZ:
+				return s_pteKindZ24S8;
+			case NvKind_ZF32_X24S8:
+			case NvKind_ZF32_X24S8_2CSZV:
+			case NvKind_ZF32_X24S8_MS2_2CSZV:
+			case NvKind_ZF32_X24S8_MS4_2CSZV:
+			case NvKind_ZF32_X24S8_MS8_2CSZV:
+				return s_pteKindZF32X24S8;
+			default:
+				return s_pteKindGeneric;
+		}
+	}
+
 	void nvMapRelease(NvMap* m)
 	{
 		if (!m->has_init)
@@ -125,12 +173,9 @@ DkResult MemBlock::initialize(uint32_t flags, void* storage, uint32_t size)
 		if (isCode())
 			m_codeSegOffset = getDevice()->getCodeSeg().calcOffset(va);
 
-		// TODO(S2): images share the single generic-kind mapping, so compression is never enabled
+		// TODO(S2): compressible kinds are never used
 		if (flags & DkMemBlockFlags_Image)
-		{
 			m_gpuAddrGeneric = va;
-			m_gpuAddrCompressed = va;
-		}
 	}
 
 	return DkResult_Success;
@@ -138,7 +183,12 @@ DkResult MemBlock::initialize(uint32_t flags, void* storage, uint32_t size)
 
 void MemBlock::destroy()
 {
-	m_gpuAddrCompressed = DK_GPU_ADDR_INVALID;
+	if (m_gpuAddrCompressed != DK_GPU_ADDR_INVALID)
+	{
+		nvdev::unmapMemory(m_gpuAddrCompressed, getSize());
+		nvdev::freeVa(m_gpuAddrCompressed, getSize());
+		m_gpuAddrCompressed = DK_GPU_ADDR_INVALID;
+	}
 	m_gpuAddrGeneric = DK_GPU_ADDR_INVALID;
 
 	if (m_gpuAddrPitch != DK_GPU_ADDR_INVALID)
@@ -166,7 +216,35 @@ void MemBlock::destroy()
 
 DkGpuAddr MemBlock::getGpuAddrForImage(uint32_t offset, uint32_t size, NvKind kind) noexcept
 {
-	return m_gpuAddrPitch + offset;
+	u8 pteKind = pickPteKind(kind);
+	if (pteKind == s_pteKindGeneric)
+		return m_gpuAddrPitch + offset;
+
+	if (m_gpuAddrCompressed == DK_GPU_ADDR_INVALID)
+	{
+		DkGpuAddr va;
+		if (!nvdev::allocVa(getSize(), getDevice()->getGpuInfo().bigPageSize, va))
+		{
+			DK_ERROR(DkResult_OutOfMemory, "failed to allocate address space for image usage");
+			return DK_GPU_ADDR_INVALID;
+		}
+		if (R_FAILED(nvdev::mapMemory(getHandle(), 0, va, getSize(), isGpuCached())))
+		{
+			nvdev::freeVa(va, getSize());
+			DK_ERROR(DkResult_Fail, "failed to map memory block for image usage");
+			return DK_GPU_ADDR_INVALID;
+		}
+		m_gpuAddrCompressed = va;
+	}
+
+	u8 appliedKind;
+	if (R_FAILED(nvdev::changeKind(m_gpuAddrCompressed + offset, size, pteKind, appliedKind)))
+		DK_ERROR(DkResult_Fail, "failed to remap memory block for image usage");
+#ifdef DEBUG
+	else if (appliedKind != pteKind)
+		DK_WARNING("image memory got page kind 0x%02x instead of 0x%02x", appliedKind, pteKind);
+#endif
+	return m_gpuAddrCompressed + offset;
 }
 
 DkMemBlock dkMemBlockCreate(DkMemBlockMaker const* maker)

@@ -557,6 +557,16 @@ Result dk::detail::nvdev::mapMemory(u32 rangeId, u64 offset, DkGpuAddr va, u64 s
 	return rc;
 }
 
+Result dk::detail::nvdev::changeKind(DkGpuAddr va, u64 size, u8 kind, u8& appliedKind) noexcept
+{
+	MutexHolder m{g_nv.mapMutex};
+	appliedKind = 0;
+	Result rc = gsvGpuChangeKind(&g_nv.gpu, g_nv.vmId, va, size, kind, g_nv.mapSlot, &appliedKind);
+	if (R_SUCCEEDED(rc))
+		rc = waitMapSlot();
+	return rc;
+}
+
 void dk::detail::nvdev::unmapMemory(DkGpuAddr va, u64 size) noexcept
 {
 	MutexHolder m{g_nv.mapMutex};
