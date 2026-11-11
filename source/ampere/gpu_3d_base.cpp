@@ -214,33 +214,6 @@ void Queue::setup3DEngine()
 	w << Cmd(3D, MmeProgramRegion{}, Iova(getDevice()->getCodeSeg().getBase()));
 	w << CmdInline(3D, Unknown5ad{}, 0);
 
-	// The following pgraph register writes apparently initialize the tile cache hardware.
-	if (drakoProbeFlags & DrakoProbe_InitTileCacheRegs)
-	{
-		w << Macro(WriteHardwareReg, 0x00418E40, 0x00000007, 0x0000000F);
-		w << Macro(WriteHardwareReg, 0x00418E58, 0x00000842, 0x0000FFFF);
-		w << Macro(WriteHardwareReg, 0x00418E40, 0x00000070, 0x000000F0);
-		w << Macro(WriteHardwareReg, 0x00418E58, 0x04F10000, 0xFFFF0000);
-		w << Macro(WriteHardwareReg, 0x00418E40, 0x00000700, 0x00000F00);
-		w << Macro(WriteHardwareReg, 0x00418E5C, 0x00000053, 0x0000FFFF);
-		w << Macro(WriteHardwareReg, 0x00418E40, 0x00007000, 0x0000F000);
-		w << Macro(WriteHardwareReg, 0x00418E5C, 0x00E90000, 0xFFFF0000);
-		w << Macro(WriteHardwareReg, 0x00418E40, 0x00070000, 0x000F0000);
-		w << Macro(WriteHardwareReg, 0x00418E60, 0x000000EA, 0x0000FFFF);
-		w << Macro(WriteHardwareReg, 0x00418E40, 0x00700000, 0x00F00000);
-		w << Macro(WriteHardwareReg, 0x00418E60, 0x00EB0000, 0xFFFF0000);
-		w << Macro(WriteHardwareReg, 0x00418E40, 0x07000000, 0x0F000000);
-		w << Macro(WriteHardwareReg, 0x00418E64, 0x00000208, 0x0000FFFF);
-		w << Macro(WriteHardwareReg, 0x00418E40, 0x70000000, 0xF0000000);
-		w << Macro(WriteHardwareReg, 0x00418E64, 0x02090000, 0xFFFF0000);
-		w << Macro(WriteHardwareReg, 0x00418E44, 0x00000007, 0x0000000F);
-		w << Macro(WriteHardwareReg, 0x00418E68, 0x0000020A, 0x0000FFFF);
-		w << Macro(WriteHardwareReg, 0x00418E44, 0x00000070, 0x000000F0);
-		w << Macro(WriteHardwareReg, 0x00418E68, 0x020B0000, 0xFFFF0000);
-		w << Macro(WriteHardwareReg, 0x00418E44, 0x00000700, 0x00000F00);
-		w << Macro(WriteHardwareReg, 0x00418E6C, 0x00000644, 0x0000FFFF);
-	}
-
 	w << Cmd(3D, TiledCacheTileSize{}, 0x80 | (0x80 << 16));
 	if (drakoProbeFlags & DrakoProbe_TiledCacheConfig)
 	{
