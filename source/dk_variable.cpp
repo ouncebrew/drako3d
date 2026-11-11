@@ -4,6 +4,7 @@
 
 #include "engine_3d.h"
 #include "engine_gpfifo.h"
+#include <cpu_uncached_atomics.h>
 
 using namespace maxwell;
 using namespace dk::detail;
@@ -14,6 +15,22 @@ using R = Engine3D::SetReportSemaphore;
 
 namespace
 {
+	Mutex s_signalMutex;
+
+	uint32_t applyVarOp(uint32_t cur, DkVarOp op, uint32_t value)
+	{
+		switch (op)
+		{
+			default:
+			case DkVarOp_Set: return value;
+			case DkVarOp_Add: return cur + value;
+			case DkVarOp_Sub: return cur - value;
+			case DkVarOp_And: return cur & value;
+			case DkVarOp_Or:  return cur | value;
+			case DkVarOp_Xor: return cur ^ value;
+		}
+	}
+
 	uint32_t getGpfifoWaitAction(DkVarCompareOp op)
 	{
 		switch (op)
@@ -118,27 +135,36 @@ uint32_t dkVariableRead(DkVariable const* obj)
 
 void dkVariableSignal(DkVariable const* obj, DkVarOp op, uint32_t value)
 {
-	switch (op)
+	if (!CpuUncachedExclusives && op != DkVarOp_Set)
 	{
-		default:
-		case DkVarOp_Set:
-			__atomic_store_n(obj->m_cpuAddr, value, __ATOMIC_SEQ_CST);
-			break;
-		case DkVarOp_Sub:
-			value = -value;
-			// fallthrough
-		case DkVarOp_Add:
-			__atomic_add_fetch(obj->m_cpuAddr, value, __ATOMIC_SEQ_CST);
-			break;
-		case DkVarOp_And:
-			__atomic_and_fetch(obj->m_cpuAddr, value, __ATOMIC_SEQ_CST);
-			break;
-		case DkVarOp_Or:
-			__atomic_or_fetch(obj->m_cpuAddr, value, __ATOMIC_SEQ_CST);
-			break;
-		case DkVarOp_Xor:
-			__atomic_xor_fetch(obj->m_cpuAddr, value, __ATOMIC_SEQ_CST);
-			break;
+		MutexHolder m{s_signalMutex};
+		uint32_t cur = __atomic_load_n(obj->m_cpuAddr, __ATOMIC_SEQ_CST);
+		__atomic_store_n(obj->m_cpuAddr, applyVarOp(cur, op, value), __ATOMIC_SEQ_CST);
+	}
+	else
+	{
+		switch (op)
+		{
+			default:
+			case DkVarOp_Set:
+				__atomic_store_n(obj->m_cpuAddr, value, __ATOMIC_SEQ_CST);
+				break;
+			case DkVarOp_Sub:
+				value = -value;
+				// fallthrough
+			case DkVarOp_Add:
+				__atomic_add_fetch(obj->m_cpuAddr, value, __ATOMIC_SEQ_CST);
+				break;
+			case DkVarOp_And:
+				__atomic_and_fetch(obj->m_cpuAddr, value, __ATOMIC_SEQ_CST);
+				break;
+			case DkVarOp_Or:
+				__atomic_or_fetch(obj->m_cpuAddr, value, __ATOMIC_SEQ_CST);
+				break;
+			case DkVarOp_Xor:
+				__atomic_xor_fetch(obj->m_cpuAddr, value, __ATOMIC_SEQ_CST);
+				break;
+		}
 	}
 	__asm__ __volatile__("dmb\tst" ::: "memory"); // "DMB operation that waits only for stores to complete." i.e. so that it is visible to the GPU
 }
