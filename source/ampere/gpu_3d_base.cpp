@@ -10,15 +10,12 @@
 
 #include "../driver_constbuf.h"
 #include "texture_image_control_types.h"
-#include <drako_probe.h>
 
 using namespace maxwell;
 using namespace dk::detail;
 
 using E = Engine3D;
 using SRC = E::MmeShadowRamControl;
-
-uint32_t drakoProbeFlags;
 
 namespace
 {
@@ -62,9 +59,6 @@ namespace
 
 void Queue::setup3DEngine()
 {
-	if (drakoProbeFlags & DrakoProbe_Skip3DInit)
-		return;
-
 	CmdBufWriter w{&m_cmdBuf};
 
 	w << CmdInline(3D, MultisampleEnable{}, 0);
@@ -116,8 +110,6 @@ void Queue::setup3DEngine()
 	w << Macro(WriteHardwareReg, 0x00419BA4, 0x00000000, 0x00000008);
 	w << Macro(WriteHardwareReg, 0x00419A04, 0x00000001, 0x00000001);
 	w << Macro(WriteHardwareReg, 0x00419A04, 0x00000002, 0x00000002);
-	if (drakoProbeFlags & DrakoProbe_InitHwRegFe)
-		w << Macro(WriteHardwareReg, 0x00404468, 0x07FFFFFF, 0x3FFFFFFF);
 	w << CmdInline(3D, ZcullUnknown65a{}, 0x11);
 	w << CmdInline(3D, ZcullTestMask{}, 0x00);
 	w << CmdInline(3D, ZcullRegion{}, hasZcull() ? 0 : 0x3f);
@@ -201,8 +193,7 @@ void Queue::setup3DEngine()
 
 	w << CmdInline(3D, DepthTargetArrayMode{}, E::DepthTargetArrayMode::Layers{1});
 	w << CmdInline(3D, SetConservativeRasterEnable{}, 0);
-	if (drakoProbeFlags & DrakoProbe_ConservativeRasterReg)
-		w << Macro(WriteHardwareReg, 0x00418800, 0x00000000, 0x01800000);
+	w << Cmd(3D, ConservativeRasterControl{}, E::ConservativeRasterControl::UncertaintyRegionSize{3});
 	w << CmdInline(3D, MmeConservativeRasterDilateEnabled{}, 0);
 	w << CmdInline(3D, Unknown0bb{}, 0);
 
@@ -215,13 +206,6 @@ void Queue::setup3DEngine()
 	w << CmdInline(3D, Unknown5ad{}, 0);
 
 	w << Cmd(3D, TiledCacheTileSize{}, 0x80 | (0x80 << 16));
-	if (drakoProbeFlags & DrakoProbe_TiledCacheConfig)
-	{
-		w << Cmd(3D, TiledCacheUnknownConfig0{}, 0x00001109);
-		w << Cmd(3D, TiledCacheUnknownConfig1{}, 0x08080202);
-		w << Cmd(3D, TiledCacheUnknownConfig2{}, 0x0000001F);
-		w << Cmd(3D, TiledCacheUnknownConfig3{}, 0x00080001);
-	}
 	w << CmdInline(3D, TiledCacheUnkFeatureEnable{}, 0);
 }
 

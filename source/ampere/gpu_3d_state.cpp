@@ -4,7 +4,6 @@
 
 #include "mme_macros.h"
 #include "engine_3d.h"
-#include <drako_probe.h>
 
 using namespace maxwell;
 using namespace dk::detail;
@@ -233,14 +232,11 @@ void dkCmdBufSetConservativeRasterDilate(DkCmdBuf obj, float dilate)
 	else if (dilateInt > 3) dilateInt = 3;
 
 	CmdBufWriter w{obj};
-	w.reserve(6);
+	w.reserve(4);
 
-	// TODO(S2): the dilate field of 0x418800 is unverified on T239 and a rejected pgraph write
-	// puts the queue in error state, so only write when the probe enables it.
-	if (drakoProbeFlags & DrakoProbe_ConservativeRasterReg)
-		w << Macro(WriteHardwareReg, 0x418800, dilateInt<<23, 3<<23);
-	else if (dilateInt > 0)
-		DK_WARNING("conservative raster dilate is not supported yet on T239");
+	w << Cmd(3D, ConservativeRasterControl{},
+		E::ConservativeRasterControl::ExtraPrimBloat{(uint32_t)dilateInt} | E::ConservativeRasterControl::UncertaintyRegionSize{3}
+	);
 	w << CmdInline(3D, MmeConservativeRasterDilateEnabled{}, dilateInt>0);
 	w << MacroInline(UpdateConservativeRaster, 0);
 }

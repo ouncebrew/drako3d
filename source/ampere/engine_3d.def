@@ -23,6 +23,14 @@ engine _3D 0xC797;
 
 0x086 Unknown086;
 
+0x08C ConservativeRasterControl bits (
+	0..3   ExtraPrimBloat;
+	4      CopyInnerToOuter;
+	8..10  TriangleSnapMode;
+	12..14 LineAndPointSnapMode;
+	16..19 UncertaintyRegionSize;
+);
+
 0x08E IndexBufferSize iova;
 
 0x0b2 SyncptAction bits (
@@ -241,9 +249,6 @@ engine _3D 0xC797;
 	0..15  Width;
 	16..31 Height;
 );
-0x3DA TiledCacheUnknownConfig0;
-0x3DB TiledCacheUnknownConfig1;
-0x3DC TiledCacheUnknownConfig3;
 0x3DE DiscardRenderTarget bits (
 	0    DepthStencil bool;
 	4..6 Color;
@@ -306,8 +311,6 @@ engine _3D 0xC797;
 );
 
 0x43F Unknown43f;
-
-0x442 TiledCacheUnknownConfig2;
 
 0x446 VertexIdBase; // maybe this is the base value for gl_VertexID (a[0x2fc])
 
