@@ -10,7 +10,6 @@ constexpr uint32_t ComputeQmdVersion      = 0;
 constexpr uint32_t ComputeQmdMajorVersion = 3;
 
 // NVN uses slots 0-2 for driver data and 3-7 for constbufs
-// TODO(S2): user constbufs are still bound at id+2
 constexpr uint32_t ComputeQmdFirstUserCbuf = 3;
 
 struct ComputeQmd

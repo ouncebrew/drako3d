@@ -4,6 +4,7 @@
 
 using namespace dk::detail;
 
+#if !DK_GPU_AMPERE
 inline void ComputeQueue::bindUniformBuffer(uint32_t id, DkGpuAddr addr, uint32_t size)
 {
 	job.cbuf.uniformBufs[id] = addr;
@@ -26,6 +27,7 @@ inline void ComputeQueue::bindImage(uint32_t id, DkResHandle handle)
 {
 	job.cbuf.data.images[id] = handle;
 }
+#endif
 
 void ComputeQueue::initialize()
 {

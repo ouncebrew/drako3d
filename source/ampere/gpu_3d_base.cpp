@@ -133,10 +133,19 @@ void Queue::setup3DEngine()
 	w << Cmd(3D, SetInstrumentationMethodData{}, 0x49000001);
 	w << Cmd(3D, MmeDriverConstbufIova{}, m_workBuf.getGraphicsCbuf() >> 8, m_workBuf.getGraphicsCbufSize());
 	w << Cmd(3D, VertexRunoutBufferIova{}, Iova(m_workBuf.getVtxRunoutBuf()));
-	w << Macro(SelectDriverConstbuf, 0);
+	w.reserve(4 + 6 + DkStage_MaxGraphics*(4 + 1 + 10) + 3);
+	w << Cmd(3D, ConstbufSelectorSize{}, GraphicsDriverCbufBindSize, Iova(m_workBuf.getGraphicsCbuf()));
 	w << MacroSetRegisterInArray<E::Bind>(E::Bind::Constbuf{},
 		E::Bind::Constbuf::Valid{} | E::Bind::Constbuf::Index{0}
 	);
+	for (uint32_t i = 0; i < DkStage_MaxGraphics; i ++)
+	{
+		DkGpuAddr handleCbuf = m_workBuf.getGraphicsCbuf() + offsetof(GraphicsDriverCbuf, handles) + i*sizeof(GraphicsHandleCbuf);
+		w << Cmd(3D, ConstbufSelectorSize{}, sizeof(GraphicsHandleCbuf), Iova(handleCbuf));
+		w << CmdInline(3D, Bind::Constbuf{i}, E::Bind::Constbuf::Valid{} | E::Bind::Constbuf::Index{GraphicsHandleCbufIndex});
+		w << Cmd(3D, LoadConstbufOffset{}, 0, 0, 1, 2, 3, 4, 5, 6, 7);
+	}
+	w << Macro(SelectDriverConstbuf, 0);
 
 	w << CmdInline(3D, AdvancedBlendEnable{}, 0);
 	w << CmdInline(3D, IndependentBlendEnable{}, 1);

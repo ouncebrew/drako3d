@@ -10,11 +10,26 @@
 using namespace dk::detail;
 using namespace maxwell;
 
-#define offsetof_nonconst(_Cls, _Memb) \
-	reinterpret_cast<uintptr_t>(&static_cast<_Cls volatile*>(nullptr)->_Memb)
-
 namespace
 {
+	void writeGraphicsHandles(CmdBufWriter<false>& w, uint32_t stage, uint32_t id, DkResHandle const handles[], uint32_t numHandles)
+	{
+		w.reserve(3 + numHandles*GraphicsHandleWords);
+		w << MacroInline(SelectDriverConstbuf, graphicsHandleOffset(stage, id)/4);
+		w << CmdInline(3D, PipeNop{}, 0);
+		w << CmdList<1>{ MakeCmdHeader(NonIncreasing, numHandles*GraphicsHandleWords, Subchannel3D, Engine3D::LoadConstbufData{}) };
+		if (GraphicsHandleWords == 1)
+			w.addRawData(handles, numHandles*sizeof(DkResHandle));
+		else
+		{
+			for (uint32_t i = 0; i < numHandles; i ++)
+			{
+				uint32_t desc[GraphicsHandleWords] = { handles[i] };
+				w.addRawData(desc, sizeof(desc));
+			}
+		}
+	}
+
 #ifdef DEBUG
 
 	constexpr bool checkInRange(uint32_t base, uint32_t size, uint32_t max)
@@ -196,10 +211,10 @@ void dkCmdBufBindUniformBuffers(DkCmdBuf obj, DkStage stage, uint32_t firstId, D
 		if (buf.size)
 		{
 			w << Cmd(3D, ConstbufSelectorSize{}, (buf.size + 0xFF) &~ 0xFF, Iova(buf.addr));
-			w << CmdInline(3D, Bind::Constbuf{stage}, Engine3D::Bind::Constbuf::Valid{} | Engine3D::Bind::Constbuf::Index{2+firstId+i});
+			w << CmdInline(3D, Bind::Constbuf{stage}, Engine3D::Bind::Constbuf::Valid{} | Engine3D::Bind::Constbuf::Index{GraphicsFirstUserCbuf+firstId+i});
 		}
 		else
-			w << CmdInline(3D, Bind::Constbuf{stage}, Engine3D::Bind::Constbuf::Index{2+firstId+i});
+			w << CmdInline(3D, Bind::Constbuf{stage}, Engine3D::Bind::Constbuf::Index{GraphicsFirstUserCbuf+firstId+i});
 	}
 }
 
@@ -230,7 +245,7 @@ void dkCmdBufBindStorageBuffers(DkCmdBuf obj, DkStage stage, uint32_t firstId, D
 	static_assert(offsetof(DkBufExtents,size) == offsetof(BufDescriptor,size),    "Bad definition for DkBufExtents");
 
 	w.reserve(2 + numBuffers*4);
-	w << MacroInline(SelectDriverConstbuf, offsetof_nonconst(GraphicsDriverCbuf, data[stage].storageBufs[firstId])/4);
+	w << MacroInline(SelectDriverConstbuf, graphicsStorageBufOffset(stage, firstId)/4);
 	w << CmdList<1>{ MakeCmdHeader(NonIncreasing, numBuffers*4, Subchannel3D, Engine3D::LoadConstbufData{}) };
 	w.addRawData(buffers, numBuffers*sizeof(DkBufExtents));
 }
@@ -256,11 +271,7 @@ void dkCmdBufBindTextures(DkCmdBuf obj, DkStage stage, uint32_t firstId, DkResHa
 		return;
 	}
 
-	w.reserve(3 + numHandles);
-	w << MacroInline(SelectDriverConstbuf, offsetof_nonconst(GraphicsDriverCbuf, data[stage].textures[firstId])/4);
-	w << CmdInline(3D, PipeNop{}, 0);
-	w << CmdList<1>{ MakeCmdHeader(NonIncreasing, numHandles, Subchannel3D, Engine3D::LoadConstbufData{}) };
-	w.addRawData(handles, numHandles*sizeof(DkResHandle));
+	writeGraphicsHandles(w, stage, firstId, handles, numHandles);
 }
 
 void dkCmdBufBindImages(DkCmdBuf obj, DkStage stage, uint32_t firstId, DkResHandle const handles[], uint32_t numHandles)
@@ -284,9 +295,5 @@ void dkCmdBufBindImages(DkCmdBuf obj, DkStage stage, uint32_t firstId, DkResHand
 		return;
 	}
 
-	w.reserve(3 + numHandles);
-	w << MacroInline(SelectDriverConstbuf, offsetof_nonconst(GraphicsDriverCbuf, data[stage].images[firstId])/4);
-	w << CmdInline(3D, PipeNop{}, 0);
-	w << CmdList<1>{ MakeCmdHeader(NonIncreasing, numHandles, Subchannel3D, Engine3D::LoadConstbufData{}) };
-	w.addRawData(handles, numHandles*sizeof(DkResHandle));
+	writeGraphicsHandles(w, stage, DK_NUM_TEXTURE_BINDINGS+firstId, handles, numHandles);
 }

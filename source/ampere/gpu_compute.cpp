@@ -45,6 +45,8 @@ namespace
 
 void ComputeQueue::initQmd()
 {
+	for (uint32_t i = 0; i < 8; i ++)
+		job.cbuf.handles._reserved[i] = i;
 	job.qmd.api_visible_call_limit = 1; // no_check
 	job.qmd.sm_global_caching_enable = 1;
 	job.qmd.qmd_version = ComputeQmdVersion;
@@ -87,6 +89,30 @@ void ComputeQueue::bindConstbuf(uint32_t id, DkGpuAddr addr, uint32_t size)
 		job.qmd.constant_buffer_valid &= ~(1U << id);
 }
 
+void ComputeQueue::bindUniformBuffer(uint32_t id, DkGpuAddr addr, uint32_t size)
+{
+	job.cbuf.uniformBufs[id].address = addr;
+	job.cbuf.uniformBufs[id].size = size;
+	if (id < 8 - ComputeQmdFirstUserCbuf)
+		bindConstbuf(id + ComputeQmdFirstUserCbuf, addr, size);
+}
+
+void ComputeQueue::bindStorageBuffer(uint32_t id, DkGpuAddr addr, uint32_t size)
+{
+	job.cbuf.storageBufs[id].address = addr;
+	job.cbuf.storageBufs[id].size = size;
+}
+
+void ComputeQueue::bindTexture(uint32_t id, DkResHandle handle)
+{
+	job.cbuf.handles.textures[id].handle = handle;
+}
+
+void ComputeQueue::bindImage(uint32_t id, DkResHandle handle)
+{
+	job.cbuf.handles.images[id].handle = handle;
+}
+
 void ComputeQueue::bindShader(CtrlCmdComputeShader const* cmd)
 {
 	DkDevice dev = m_parent.getDevice();
@@ -116,10 +142,6 @@ void ComputeQueue::bindShader(CtrlCmdComputeShader const* cmd)
 	job.qmd.shader_local_memory_high_size = cmd->localHiMemSize;
 	job.qmd.register_count_v = cmd->numRegisters;
 	bindConstbuf(1, dev->getCodeSeg().getBase() + cmd->dataOffset, (cmd->dataSize + 0xFF) &~ 0xFF);
-
-	job.cbuf.ctaSize[0] = cmd->blockDims[0];
-	job.cbuf.ctaSize[1] = cmd->blockDims[1];
-	job.cbuf.ctaSize[2] = cmd->blockDims[2];
 }
 
 void ComputeQueue::dispatch(uint32_t numGroupsX, uint32_t numGroupsY, uint32_t numGroupsZ, DkGpuAddr indirect)
@@ -147,7 +169,8 @@ void ComputeQueue::dispatch(uint32_t numGroupsX, uint32_t numGroupsY, uint32_t n
 	job.qmd.cta_raster_width  = numGroupsX;
 	job.qmd.cta_raster_height = numGroupsY;
 	job.qmd.cta_raster_depth  = numGroupsZ;
-	bindConstbuf(0, jobAddr + sizeof(ComputeQmd), ComputeDriverCbufSize);
+	bindConstbuf(0, jobAddr + sizeof(ComputeQmd) + offsetof(ComputeDriverCbuf, gridSize), sizeof(ComputeDriverCbuf) - offsetof(ComputeDriverCbuf, gridSize));
+	bindConstbuf(2, jobAddr + sizeof(ComputeQmd) + offsetof(ComputeDriverCbuf, handles), sizeof(HandleCbuf));
 
 	// Update grid dimension parameters in the driver constbuf
 	job.cbuf.gridSize[0] = numGroupsX;
