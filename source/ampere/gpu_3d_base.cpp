@@ -111,15 +111,11 @@ void Queue::setup3DEngine()
 	w << CmdInline(3D, Unknown488{}, 5);
 	w << Cmd(3D, Unknown514{}, 8 | (getDevice()->getGpuInfo().numWarpsPerSm << 16));
 	// here there would be 2D engine commands
-	// TODO(S2): FECS rejected the GM20B register 0x419F78 with a firmware method error. Figure that out
-	if (drakoProbeFlags & DrakoProbe_InitHwRegs)
-	{
-		w << Macro(WriteHardwareReg, 0x00418800, 0x00000001, 0x00000001);
-		w << Macro(WriteHardwareReg, 0x00419A08, 0x00000000, 0x00000010);
-		w << Macro(WriteHardwareReg, 0x00419BA4, 0x00000000, 0x00000008);
-		w << Macro(WriteHardwareReg, 0x00419A04, 0x00000001, 0x00000001);
-		w << Macro(WriteHardwareReg, 0x00419A04, 0x00000002, 0x00000002);
-	}
+	w << Macro(WriteHardwareReg, 0x00418800, 0x00000001, 0x00000001);
+	w << Macro(WriteHardwareReg, 0x00419A08, 0x00000000, 0x00000010);
+	w << Macro(WriteHardwareReg, 0x00419BA4, 0x00000000, 0x00000008);
+	w << Macro(WriteHardwareReg, 0x00419A04, 0x00000001, 0x00000001);
+	w << Macro(WriteHardwareReg, 0x00419A04, 0x00000002, 0x00000002);
 	if (drakoProbeFlags & DrakoProbe_InitHwRegFe)
 		w << Macro(WriteHardwareReg, 0x00404468, 0x07FFFFFF, 0x3FFFFFFF);
 	w << CmdInline(3D, ZcullUnknown65a{}, 0x11);
