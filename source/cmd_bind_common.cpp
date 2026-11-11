@@ -14,8 +14,13 @@ namespace
 {
 	void writeGraphicsHandles(CmdBufWriter<false>& w, uint32_t stage, uint32_t id, DkResHandle const handles[], uint32_t numHandles)
 	{
+#if DK_GPU_AMPERE
+		w.reserve(4 + numHandles*GraphicsHandleWords);
+		w << Macro(SelectHandleConstbuf, stage, graphicsHandleCbufOffset(id)/4);
+#else
 		w.reserve(3 + numHandles*GraphicsHandleWords);
 		w << MacroInline(SelectDriverConstbuf, graphicsHandleOffset(stage, id)/4);
+#endif
 		w << CmdInline(3D, PipeNop{}, 0);
 		w << CmdList<1>{ MakeCmdHeader(NonIncreasing, numHandles*GraphicsHandleWords, Subchannel3D, Engine3D::LoadConstbufData{}) };
 		if (GraphicsHandleWords == 1)

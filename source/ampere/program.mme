@@ -23,6 +23,38 @@ SelectDriverConstbuf::
 	}
 	nop
 
+# Selects a graphics stage's handle constbuf at the specified offset, for usage with LoadConstbufData.
+# Arguments:
+# - 0: Stage ID (0=Vertex 1=TessCtrl 2=TessEval 3=Geometry 4=Fragment)
+# - 1: Offset to write to
+SelectHandleConstbuf::
+	{
+		$r0 = STATE MmeDriverConstbufIova
+		$r1 = SLL $load0 1 # stage * 0x200 >> 8
+	}
+	{
+		$r0 = ADD $r0 $r1
+		$r2 = SLL $load0 2
+	}
+	{
+		$r0 = ADD $r0 0x70 # handle constbufs start at 0x7000
+		$r3 = ADD $zero 0x200
+	}
+	{
+		$alu0 = ADD $r3 $zero
+		$alu1 = SRL $r0 24
+		mthd(ConstbufSelectorSize, incr=1)
+		emit($alu0)
+		emit($alu1)
+	}
+	*{
+		$alu0 = SLL $r0 8
+		$alu1 = ADD $r2 $zero
+		emit($alu0)
+		emit($alu1)
+	}
+	nop
+
 # Binds a program
 # Arguments:
 # - 0: Stage ID (0=VertexA 1=VertexB 2=TessCtrl 3=TessEval 4=Geometry 5=Fragment)

@@ -60,9 +60,9 @@ namespace dk::detail
 		return offsetof(GraphicsDriverCbuf, storageBufs) + ((1+stage)*DK_NUM_STORAGE_BUFS + id)*sizeof(BufDescriptor);
 	}
 
-	constexpr uint32_t graphicsHandleOffset(uint32_t stage, uint32_t id)
+	constexpr uint32_t graphicsHandleCbufOffset(uint32_t id)
 	{
-		return offsetof(GraphicsDriverCbuf, handles) + stage*sizeof(GraphicsHandleCbuf) + offsetof(GraphicsHandleCbuf, data.textures) + id*sizeof(HandleDescriptor);
+		return offsetof(GraphicsHandleCbuf, data.textures) + id*sizeof(HandleDescriptor);
 	}
 
 	constexpr uint32_t GraphicsHandleWords = sizeof(HandleDescriptor)/4;

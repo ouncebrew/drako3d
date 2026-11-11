@@ -119,7 +119,7 @@ void Queue::setup3DEngine()
 	);
 	w << Cmd(3D, SetInstrumentationMethodHeader{}, 0x49000000);
 	w << Cmd(3D, SetInstrumentationMethodData{}, 0x49000001);
-	w << Cmd(3D, MmeDriverConstbufIova{}, m_workBuf.getGraphicsCbuf() >> 8, m_workBuf.getGraphicsCbufSize());
+	w << Cmd(3D, MmeDriverConstbufIova{}, m_workBuf.getGraphicsCbuf() >> 8, GraphicsDriverCbufBindSize);
 	w << Cmd(3D, VertexRunoutBufferIova{}, Iova(m_workBuf.getVtxRunoutBuf()));
 	w.reserve(4 + 6 + DkStage_MaxGraphics*(4 + 1 + 10) + 3);
 	w << Cmd(3D, ConstbufSelectorSize{}, GraphicsDriverCbufBindSize, Iova(m_workBuf.getGraphicsCbuf()));
