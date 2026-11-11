@@ -244,14 +244,6 @@ engine _3D 0xC797;
 0x3DA TiledCacheUnknownConfig0;
 0x3DB TiledCacheUnknownConfig1;
 0x3DC TiledCacheUnknownConfig3;
-0x3DD InvalidateTextureDataCache bits (
-	// Theoretical register, same as InvalidateTextureDataCacheNoWfi but with implicit Wfi
-	0 Lines enum (
-		0 All;
-		1 One;
-	);
-	4..25 Tag;
-);
 0x3DE DiscardRenderTarget bits (
 	0    DepthStencil bool;
 	4..6 Color;
@@ -413,6 +405,15 @@ engine _3D 0xC797;
 );
 
 0x4C7 BlendConstant array[4] float;
+
+0x4CE InvalidateTextureDataCache bits (
+	// Same as InvalidateTextureDataCacheNoWfi but with implicit Wfi
+	0 Lines enum (
+		0 All;
+		1 One;
+	);
+	4..25 Tag;
+);
 
 0x4D8 ColorBlendEnable array[8] bool;
 0x4E0 StencilEnable bool;
