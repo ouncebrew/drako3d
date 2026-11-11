@@ -159,12 +159,14 @@ void ImageInfo::fromImageView(DkImageView const* view, unsigned usage)
 #ifndef DEBUG
 		default:
 #endif
+		case DkImageType_1D:
 		case DkImageType_2D:
 		case DkImageType_3D:
 		case DkImageType_2DMS:
 		case DkImageType_Rectangle:
 			layered = false;
 			break;
+		case DkImageType_1DArray:
 		case DkImageType_2DArray:
 		case DkImageType_2DMSArray:
 		case DkImageType_Cubemap:
