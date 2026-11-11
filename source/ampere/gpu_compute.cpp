@@ -27,13 +27,26 @@ namespace
 		);
 		w << CmdList<1>{ MakeCmdHeader(NonIncreasing, (sizeBytes + 3) / 4, SubchannelCompute, C::LoadInlineData{}) };
 	}
+
+	constexpr uint32_t SmemCarveoutsKb[] = { 0, 8, 16, 32, 64, 100 };
+	constexpr uint32_t NumSmemCarveouts = sizeof(SmemCarveoutsKb)/sizeof(SmemCarveoutsKb[0]);
+
+	uint32_t pickSmemCarveout(uint32_t sharedMemSize, uint32_t numCtas)
+	{
+		uint32_t maxCtas = SmemCarveoutsKb[NumSmemCarveouts-1]*1024 / (sharedMemSize ? sharedMemSize : 1);
+		if (numCtas > maxCtas)
+			numCtas = maxCtas;
+		for (uint32_t kb : SmemCarveoutsKb)
+			if (kb*1024 >= sharedMemSize*numCtas)
+				return kb/4 + 1;
+		return SmemCarveoutsKb[NumSmemCarveouts-1]/4 + 1;
+	}
 }
 
 void ComputeQueue::initQmd()
 {
-	job.qmd.api_visible_call_limit = 1; // no_limit
+	job.qmd.api_visible_call_limit = 1; // no_check
 	job.qmd.sm_global_caching_enable = 1;
-	job.qmd.l1_configuration = 3; // directly_adressable_memory_size_48kb
 	job.qmd.qmd_version = ComputeQmdVersion;
 	job.qmd.qmd_major_version = ComputeQmdMajorVersion;
 }
@@ -42,7 +55,7 @@ void ComputeQueue::initComputeEngine()
 {
 	DkDevice dev = m_parent.getDevice();
 	CmdBufWriter w{&m_parent.m_cmdBuf};
-	w.reserve(20);
+	w.reserve(17);
 
 	DkGpuAddr scratchMemIova = m_parent.m_workBuf.getScratchMem();
 	uint32_t scratchMemPerSm = m_parent.m_workBuf.getScratchMemSize() / dev->getGpuInfo().numSms;
@@ -68,7 +81,7 @@ void ComputeQueue::bindConstbuf(uint32_t id, DkGpuAddr addr, uint32_t size)
 		job.qmd.constant_buffer_valid |= 1U << id;
 		job.qmd.constant_buffer[id].addr_lower = addr;
 		job.qmd.constant_buffer[id].addr_upper = addr >> 32;
-		job.qmd.constant_buffer[id].size_enc = encodeQmdSize(size);
+		job.qmd.constant_buffer[id].size_shifted4 = (size + 0xF) >> 4;
 	}
 	else
 		job.qmd.constant_buffer_valid &= ~(1U << id);
@@ -79,48 +92,29 @@ void ComputeQueue::bindShader(CtrlCmdComputeShader const* cmd)
 	DkDevice dev = m_parent.getDevice();
 	auto& info = dev->getGpuInfo();
 
-	// Check if there's enough available scratch memory to run the shader at full speed
-	uint32_t totalScratchMem = m_parent.m_workBuf.getScratchMemSize();
-	uint32_t availablePerWarpScratchMem = m_parent.m_workBuf.getPerWarpScratchSize();
-	if (availablePerWarpScratchMem < cmd->perWarpScratchSize)
+	// The compute class has no throttled local memory configuration
+	if (m_parent.m_workBuf.getPerWarpScratchSize() < cmd->perWarpScratchSize)
 	{
-		// There isn't - so now check if there's enough memory to run the shader at all
-		uint32_t minRequiredScratchMem = (cmd->perWarpScratchSize * info.numWarpsPerSm + 0x7FFF) &~ 0x7FFF;
-		DK_WARNING("throttling compute shaders (0x%x - 0x%x - 0x%x)", cmd->perWarpScratchSize, minRequiredScratchMem, totalScratchMem);
-
-		if (totalScratchMem < minRequiredScratchMem)
-		{
-			DK_ERROR(DkResult_OutOfMemory, "not enough scratch memory to run compute shaders");
-			return;
-		}
-
-		// Calculate and configure the throttling parameters
-		job.qmd.throttled = 1;
-		uint32_t maxSms = totalScratchMem / minRequiredScratchMem;
-		if (maxSms != m_curSmThrottling)
-		{
-			m_curSmThrottling = maxSms;
-			CmdBufWriterChecked w{&m_parent.m_cmdBuf};
-			w << Cmd(Compute, SetShaderLocalMemoryThrottledA{},
-				0, minRequiredScratchMem, maxSms
-			);
-		}
+		DK_ERROR(DkResult_OutOfMemory, "not enough scratch memory to run compute shaders");
+		return;
 	}
-	else // We can run the shader at full speed.
-		job.qmd.throttled = 0;
 
 	DkGpuAddr programAddr = dev->getCodeSeg().getBase() + cmd->arg;
 	job.qmd.program_address_lower = programAddr;
 	job.qmd.program_address_upper = programAddr >> 32;
-	job.qmd.shared_memory_size_enc = encodeQmdSize(cmd->sharedMemSize);
+	uint32_t sharedMemSize = (cmd->sharedMemSize + 0xFF) &~ 0xFF;
+	uint32_t numWarps = (cmd->blockDims[0]*cmd->blockDims[1]*cmd->blockDims[2] + 31) / 32;
+	job.qmd.shared_memory_size = sharedMemSize;
+	job.qmd.min_sm_config_shared_mem_size = pickSmemCarveout(sharedMemSize, 1);
+	job.qmd.target_sm_config_shared_mem_size = pickSmemCarveout(sharedMemSize, info.numWarpsPerSm / (numWarps ? numWarps : 1));
+	job.qmd.max_sm_config_shared_mem_size = SmemCarveoutsKb[NumSmemCarveouts-1]/4 + 1;
 	job.qmd.cta_thread_dimension0 = cmd->blockDims[0];
 	job.qmd.cta_thread_dimension1 = cmd->blockDims[1];
 	job.qmd.cta_thread_dimension2 = cmd->blockDims[2];
 	job.qmd.shader_local_memory_low_size = cmd->localLoMemSize;
 	job.qmd.barrier_count = cmd->numBarriers;
 	job.qmd.shader_local_memory_high_size = cmd->localHiMemSize;
-	job.qmd.register_count = cmd->numRegisters;
-	// TODO(S2): crsSize has no known QMD field
+	job.qmd.register_count_v = cmd->numRegisters;
 	bindConstbuf(1, dev->getCodeSeg().getBase() + cmd->dataOffset, (cmd->dataSize + 0xFF) &~ 0xFF);
 
 	job.cbuf.ctaSize[0] = cmd->blockDims[0];
@@ -188,7 +182,5 @@ void ComputeQueue::dispatch(uint32_t numGroupsX, uint32_t numGroupsY, uint32_t n
 
 	// Launch the job
 	w << Cmd(Compute, SendPcasA{}, uint32_t(jobAddr>>8));
-	w << CmdInline(Compute, SendSignalingPcasB{},
-		C::SendSignalingPcasB::Invalidate{} | C::SendSignalingPcasB::Schedule{}
-	);
+	w << CmdInline(Compute, SendSignalingPcas2B{}, C::SendSignalingPcas2B::PcasAction::InvalidateCopySchedule);
 }

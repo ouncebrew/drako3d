@@ -97,6 +97,15 @@ engine Compute 0xC7C0;
 	1 Schedule bool;
 );
 
+0x0B0 SendSignalingPcas2B bits (
+	0..3 PcasAction enum (
+		0 Nop;
+		1 Invalidate;
+		2 Schedule;
+		3 InvalidateCopySchedule;
+	);
+);
+
 0x0B9 SetShaderLocalMemoryNonThrottledA bits (
 	0..7 SizeUpper;
 );
@@ -106,18 +115,6 @@ engine Compute 0xC7C0;
 );
 
 0x0BB SetShaderLocalMemoryNonThrottledC bits (
-	0..8 MaxSmCount;
-);
-
-0x0BC SetShaderLocalMemoryThrottledA bits (
-	0..7 SizeUpper;
-);
-
-0x0BD SetShaderLocalMemoryThrottledB bits (
-	0..31 SizeLower;
-);
-
-0x0BE SetShaderLocalMemoryThrottledC bits (
 	0..8 MaxSmCount;
 );
 
