@@ -206,6 +206,7 @@ void dkCmdBufSetPolygonStipple(DkCmdBuf obj, uint32_t const pattern[32])
 	{
 		w << CmdList<1>{ MakeCmdHeader(Increasing, 32, Subchannel3D, Engine3D::PolygonStipplePattern{}) };
 		w.addRawData(pattern, 32 * sizeof(u32));
+		w << CmdInline(3D, PolygonStippleEnable{}, 1);
 	}
 }
 
