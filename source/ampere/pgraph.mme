@@ -1,0 +1,32 @@
+
+# Performs a masked write to a PGRAPH register
+# Arguments:
+# - 0: PGRAPH register address
+# - 1: Value to write
+# - 2: Bitmask specifying which bits are updated
+WriteHardwareReg::
+	{
+		$r0 = ADD $load0 $zero
+		mthd(WaitForIdle, incr=0)
+		emit(0)
+		mthd(MmeFirmwareArgs, incr=1)
+	}
+	{
+		emit(0) # the firmware sets this to 1 once the write is done
+		emit($load0)
+	}
+	{
+		$alu0 = ADD $r0 $zero
+		emit($load0)
+		mthd(FirmwareCall+4, incr=0)
+		emit($alu0)
+	}
+.wait
+	{
+		$r0 = STATE MmeFirmwareArgs
+		mthd(NoOperation, incr=0)
+		emit(0)
+	}
+	BNE $r0 1 .wait
+	exit
+	nop

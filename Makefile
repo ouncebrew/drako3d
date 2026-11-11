@@ -95,9 +95,6 @@ CPPFILES	:=	$(sort $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp))))
 SFILES		:=	$(sort $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s))))
 DEFFILES	:=	$(sort $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.def))))
 MMEFILES	:=	$(sort $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.mme))))
-ifeq ($(GPU_ARCH),ampere)
-MMEFILES	:=
-endif
 BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
 
 #---------------------------------------------------------------------------------
@@ -125,6 +122,7 @@ endif
 ifeq ($(GPU_ARCH),ampere)
 export HFILES	+=	method_names.h
 export DEFFILES
+export MMEFLAGS	:=	--isa=turing
 endif
 
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
@@ -190,7 +188,7 @@ $(OFILES_SRC)	: $(HFILES)
 
 mme_macros.h : engine_3d.mme $(MMEFILES)
 	@echo $(notdir $@)
-	@dekomme -o $@ $^
+	@dekomme $(MMEFLAGS) -o $@ $^
 
 %_3d.h %_3d.mme : %_3d.def
 	@echo $(notdir $<)

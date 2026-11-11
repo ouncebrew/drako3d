@@ -1,0 +1,20 @@
+
+# Fills registers with a fixed write value
+# Arguments:
+# - 0: Bit0..11=Address, Bit12..15=Increment
+# - 1: Number of writes to perform
+# - 2: Value to write
+FillRegisters::
+	{
+		$r0 = ADD $load1 $zero
+		mthd($load0)
+	}
+	$r1 = ADD $load0 $zero
+	LOOP $r0 .done
+	{
+		$alu0 = ADD $r1 $zero
+		emit($alu0)
+	}
+.done
+	exit
+	nop

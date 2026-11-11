@@ -1,0 +1,148 @@
+
+# Selects the driver constbuf at the specified offset, for usage with LoadConstbufData
+# Arguments:
+# - 0: Offset to write to
+SelectDriverConstbuf::
+	{
+		$r0 = STATE MmeDriverConstbufIova
+		$r1 = SLL $load0 2
+	}
+	$r2 = STATE MmeDriverConstbufSize
+	{
+		$alu0 = ADD $r2 $zero
+		$alu1 = SRL $r0 24
+		mthd(ConstbufSelectorSize, incr=1)
+		emit($alu0)
+		emit($alu1)
+	}
+	*{
+		$alu0 = SLL $r0 8
+		$alu1 = ADD $r1 $zero
+		emit($alu0)
+		emit($alu1)
+	}
+	nop
+
+# Binds a program
+# Arguments:
+# - 0: Stage ID (0=VertexA 1=VertexB 2=TessCtrl 3=TessEval 4=Geometry 5=Fragment)
+# - 1: Program ID
+# - 2: Program offset (within code segment)
+# - 3: Number of registers used (GPRs)
+# (the following only for VertexB and above)
+# - 4: Compiler constbuf size
+# - 5: Compiler constbuf iova >> 8
+BindProgram::
+	{
+		$r1 = ADD $load0 $zero # stage id
+		$r2 = ADD $load1 $zero # program id
+	}
+	{
+		$r7 = STATE MmeProgramIds + $r1
+		$r3 = ADD $load0 $zero # program offset
+	}
+	{
+		$r4 = ADD $load0 $zero # num gprs
+		$r5 = SLL $r1 SetProgram_Shift # also reused as SetProgramNConfigStageId_Shift
+	}
+
+	# Use fast bind path if we're reloading the same program
+	BEQ $r7 $r2 .fastBind
+
+	# Otherwise let's get rollin'
+	{
+		$alu0 = ADD $r1 MmeProgramIds
+		$alu1 = ADD $r2 $zero
+		mthd($alu0)
+		emit($alu1)
+	}
+	{
+		$alu0 = ADD $r1 MmeProgramOffsets
+		$alu1 = ADD $r3 $zero
+		mthd($alu0)
+		emit($alu1)
+	}
+
+	# Programs are bound by address: code segment base + program offset
+	$r6 = STATE MmeProgramRegion_Low
+	$r7 = STATE MmeProgramRegion_High
+	{
+		$r6 = ADD $r6 $r3
+		$r7 = ADDC $r7 $zero
+	}
+	{
+		$alu0 = ADD $r5 SetProgramNConfig
+		$alu1 = ADD $r5 SetProgramNConfigEnable # i.e. Enable | (stageId << SetProgramNConfigStageId_Shift)
+		mthd($alu0)
+		emit($alu1)
+	}
+	{
+		$alu0 = ADD $r5 SetProgramNNumRegisters
+		$alu1 = ADD $r4 $zero
+		mthd($alu0)
+		emit($alu1)
+	}
+	{
+		$alu0 = ADD $r5 (SetProgramNAddress | (1<<12))
+		$alu1 = ADD $r7 $zero
+		mthd($alu0)
+		emit($alu1)
+	}
+	{
+		$alu0 = ADD $r6 $zero
+		emit($alu0)
+	}
+
+	# For VertexA, we skip constbuf setting
+	BEQ $r1 $zero EXIT
+
+	# Select the constbuf
+	{
+		$r2 = ADD $load0 $zero # cbuf size
+		$r3 = ADD $load1 $zero # cbuf iova >> 8
+	}
+	$r1 = SLL $r1 Bind_Shift # stage id is one more than the cbuf register index, see below
+	BEQ $r2 $zero .unbindCbuf # if size is zero then we unbind c[0x1] instead
+	{
+		$alu0 = ADD $r2 $zero
+		$alu1 = SRL $r3 24
+		mthd(ConstbufSelectorSize, incr=1)
+		emit($alu0)
+		emit($alu1)
+	}
+	{
+		$alu0 = SLL $r3 8
+		$r1 = ADD $r1 (BindNConstbuf - Bind_Size)
+		emit($alu0)
+	}
+
+	# Bind the stage's compiler constbuf (i.e. c[0x1])
+	*{
+		$alu0 = ADD $r1 $zero
+		mthd($alu0)
+		emit(BindNConstbufValid | (1 << BindNConstbufIndex_Shift))
+	}
+	nop
+
+.unbindCbuf
+	# Unbind the stage's c[0x1]
+	*{
+		$alu0 = ADD $r1 (BindNConstbuf - Bind_Size)
+		mthd($alu0)
+		emit(1 << BindNConstbufIndex_Shift)
+	}
+	nop
+
+.fastBind
+	# The only thing we need to do is reenabling the shader stage.
+	{
+		$alu0 = ADD $r5 SetProgramNConfig
+		$alu1 = ADD $r5 SetProgramNConfigEnable
+		mthd($alu0)
+		emit($alu1)
+	}
+	BEQ $r1 $zero EXIT # for VertexA, there are no constbuf params to skip
+	*{
+		ADD $load0 $load1 # dummy pop of cbuf size and cbuf iova >> 8
+	}
+	nop

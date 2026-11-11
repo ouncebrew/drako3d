@@ -1,0 +1,161 @@
+
+# Binds color blend enable state
+# Arguments:
+# - 0: DkColorState::blendEnableMask
+BindColorBlendEnableState::
+	{
+		$r0 = ADD $load0 $zero
+		mthd(ColorLogicOpEnable, incr=0)
+		emit(0)
+		mthd(ColorBlendEnable, incr=1)
+	}
+	{
+		$alu0 = MERGE $zero $r0 (dst_pos=0, bits=1, src_pos=0)
+		$alu1 = MERGE $zero $r0 (dst_pos=0, bits=1, src_pos=1)
+		emit($alu0)
+		emit($alu1)
+	}
+	{
+		$alu0 = MERGE $zero $r0 (dst_pos=0, bits=1, src_pos=2)
+		$alu1 = MERGE $zero $r0 (dst_pos=0, bits=1, src_pos=3)
+		emit($alu0)
+		emit($alu1)
+	}
+	*{
+		$alu0 = MERGE $zero $r0 (dst_pos=0, bits=1, src_pos=4)
+		$alu1 = MERGE $zero $r0 (dst_pos=0, bits=1, src_pos=5)
+		emit($alu0)
+		emit($alu1)
+	}
+	{
+		$alu0 = MERGE $zero $r0 (dst_pos=0, bits=1, src_pos=6)
+		$alu1 = MERGE $zero $r0 (dst_pos=0, bits=1, src_pos=7)
+		emit($alu0)
+		emit($alu1)
+	}
+
+# Binds color write mask state
+# Arguments:
+# - 0: DkColorWriteState::masks
+BindColorWriteMasks::
+	{
+		$r0 = ADD $load0 $zero
+		$r3 = ADD $zero ColorWriteMask_Count
+		mthd(ColorWriteMask, incr=1)
+	}
+	LOOP $r3 .done
+	{
+		$r1 = MERGE $zero $r0 (dst_pos=ColorWriteMaskRed_Shift,   bits=1, src_pos=0)
+		$r2 = MERGE $zero $r0 (dst_pos=ColorWriteMaskGreen_Shift, bits=1, src_pos=1)
+	}
+	{
+		$r1 = MERGE $r1 $r0 (dst_pos=ColorWriteMaskBlue_Shift,  bits=1, src_pos=2)
+		$r2 = MERGE $r2 $r0 (dst_pos=ColorWriteMaskAlpha_Shift, bits=1, src_pos=3)
+	}
+	{
+		$alu0 = OR $r1 $r2
+		$r0 = SRL $r0 4
+		emit($alu0)
+	}
+.done
+	exit
+	nop
+
+# Binds depth/stencil state
+# Arguments:
+# - 0: First word of DkDepthStencilState
+# - 1: Second word of DkDepthStencilState
+BindDepthStencilState::
+	{
+		$r0 = ADD $load0 $zero
+		$r1 = ADD $load1 $zero
+	}
+	{
+		$r2 = MERGE $zero $r0 (dst_pos=0, bits=1, src_pos=0) # depthTestEnable
+		$r3 = MERGE $zero $r0 (dst_pos=0, bits=1, src_pos=2) # stencilTestEnable
+	}
+	{
+		$alu0 = ADD $r2 $zero
+		mthd(DepthTestEnable, incr=0)
+		emit($alu0)
+	}
+	BEQ $r2 $zero .checkStencil
+	{
+		$alu0 = MERGE $zero $r0 (dst_pos=0, bits=1, src_pos=1) # depthWriteEnable
+		mthd(DepthWriteEnable, incr=0)
+		emit($alu0)
+	}
+	{
+		$alu0 = MERGE $zero $r0 (dst_pos=0, bits=4, src_pos=4) # depthCompareOp
+		mthd(DepthTestFunc, incr=0)
+		emit($alu0)
+	}
+
+.checkStencil
+	{
+		$alu0 = ADD $r3 $zero
+		mthd(StencilEnable, incr=1) # StencilFrontOpFail follows
+		emit($alu0)
+	}
+	BEQ $r3 $zero EXIT
+	{
+		$alu0 = MERGE $zero $r1 (dst_pos=0, bits=4, src_pos=0)  # StencilFrontOpFail
+		$alu1 = MERGE $zero $r1 (dst_pos=0, bits=4, src_pos=8)  # StencilFrontOpZFail
+		emit($alu0)
+		emit($alu1)
+	}
+	{
+		$alu0 = MERGE $zero $r1 (dst_pos=0, bits=4, src_pos=4)  # StencilFrontOpZPass
+		$alu1 = MERGE $zero $r1 (dst_pos=0, bits=4, src_pos=12) # StencilFrontFunc
+		emit($alu0)
+		emit($alu1)
+	}
+	{
+		$alu0 = MERGE $zero $r1 (dst_pos=0, bits=4, src_pos=16) # StencilBackOpFail
+		mthd(StencilBackOpFail, incr=1)
+		emit($alu0)
+	}
+	*{
+		$alu0 = MERGE $zero $r1 (dst_pos=0, bits=4, src_pos=24) # StencilBackOpZFail
+		$alu1 = MERGE $zero $r1 (dst_pos=0, bits=4, src_pos=20) # StencilBackOpZPass
+		emit($alu0)
+		emit($alu1)
+	}
+	{
+		$alu0 = MERGE $zero $r1 (dst_pos=0, bits=4, src_pos=28) # StencilBackFunc
+		emit($alu0)
+	}
+
+# Updates the current zcull stencil criteria, skipping the update if it's unchanged
+# Arguments:
+# - 0: Word to write to ZcullStencilCriteria
+SetStencilCullCriteria::
+	{
+		$r0 = ADD $load0 $zero
+		$r1 = STATE MmeStencilCullCriteria
+	}
+	BEQ $r0 $r1 EXIT
+	*{
+		$alu0 = ADD $r0 $zero
+		mthd(ZcullStencilCriteria, incr=0)
+		emit($alu0)
+		mthd(MmeStencilCullCriteria, incr=0)
+		emit($alu0)
+	}
+	nop
+
+# Updates an unknown register based off conservative raster state
+# Arguments:
+# - 0: Ignored
+UpdateConservativeRaster::
+	{
+		$r0 = STATE SetConservativeRasterEnable
+		ADD $load0 $zero
+	}
+	$r1 = STATE MmeConservativeRasterDilateEnabled
+	*$r0 = AND $r0 $r1
+	{
+		$alu0 = SLL $r0 4
+		mthd(Unknown0bb, incr=0)
+		emit($alu0)
+	}

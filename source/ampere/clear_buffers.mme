@@ -1,0 +1,63 @@
+
+# Performs a ClearBuffers operation on all layers of the specified color render target
+# Arguments:
+# - 0: Argument to Engine3D::ClearBuffers
+ClearColor::
+	{
+		$r1 = ADD $load0 $zero
+		$r0 = MERGE $zero $load0 (dst_pos=RenderTarget_Shift, bits=ClearBuffersTargetId_Size, src_pos=ClearBuffersTargetId_Shift)
+	}
+	$r0 = STATE RenderTargetNArrayMode + $r0
+	$r0 = MERGE $zero $r0 (dst_pos=0, bits=RenderTargetNArrayModeLayers_Size, src_pos=0)
+	BEQ $r0 $zero EXIT
+	LOOP $r0 .done
+	{
+		$alu0 = ADD $r1 $zero
+		$r1 = ADD $r1 (1<<ClearBuffersLayerId_Shift)
+		mthd(ClearBuffers, incr=0)
+		emit($alu0)
+	}
+.done
+	exit
+	nop
+
+# Performs a ClearBuffers operation on all layers of the depth/stencil render target
+# Arguments:
+# - 0: Argument to Engine3D::ClearBuffers
+ClearDepthStencil::
+	{
+		$r1 = ADD $load0 $zero
+		$r0 = STATE DepthTargetArrayMode
+	}
+	$r0 = MERGE $zero $r0 (dst_pos=0, bits=DepthTargetArrayModeLayers_Size, src_pos=0)
+	BEQ $r0 $zero EXIT
+	LOOP $r0 .done
+	{
+		$alu0 = ADD $r1 $zero
+		$r1 = ADD $r1 (1<<ClearBuffersLayerId_Shift)
+		mthd(ClearBuffers, incr=0)
+		emit($alu0)
+	}
+.done
+	exit
+	nop
+
+# Invalidates Zcull state if there is a change in the depth target
+# Arguments:
+# - 0: Depth target iova >> 8
+ConditionalZcullInvalidate::
+	{
+		$r0 = ADD $load0 $zero
+		$r1 = STATE MmeDepthRenderTargetIova
+	}
+	BEQ $r0 $r1 EXIT
+	{
+		$alu0 = ADD $r0 $zero
+		mthd(MmeDepthRenderTargetIova, incr=0)
+		emit($alu0)
+	}
+	*{
+		mthd(InvalidateZcullNoWfi, incr=0)
+		emit(0x19)
+	}
+	nop

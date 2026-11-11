@@ -41,6 +41,7 @@ public:
 	uint32_t getId() const noexcept { return nvMapGetId(&m_mapObj); }
 	uint32_t getSize() const noexcept { return nvMapGetSize(&m_mapObj); }
 	void* getCpuAddr() const noexcept { return isCpuNoAccess() ? nullptr : nvMapGetCpuAddr(&m_mapObj); }
+	void* getStorageAddr() const noexcept { return nvMapGetCpuAddr(&m_mapObj); }
 	uint32_t getCodeSegOffset() const noexcept { return isCode() ? m_codeSegOffset : ~0U; }
 	DkGpuAddr getGpuAddrPitch() const noexcept { return m_gpuAddrPitch; }
 	DkGpuAddr getGpuAddrGeneric() const noexcept { return m_gpuAddrGeneric; }

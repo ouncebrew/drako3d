@@ -1,0 +1,165 @@
+
+# Locations of gl_BaseVertex and gl_BaseInstance
+%equ DriverCbufBaseVertex   0x640
+%equ DriverCbufBaseInstance 0x644
+
+# Non-indexed single-draw
+# Arguments:
+# - 0: Primitive
+# - 1: Vertex count
+# - 2: Instance count
+# - 3: First vertex (does not update gl_BaseVertex)
+# - 4: First instance (updates gl_BaseInstance)
+Draw::
+	{
+		$r1 = ADD $load0 $zero # primitive
+		$r6 = ADD $load1 $zero # vertex count
+	}
+	{
+		$r7 = ADD $load0 $zero # instance count
+		$r2 = ADD $zero 1
+		mthd(DrawArraysFirst, incr=0)
+		emit($load1)           # first vertex
+	}
+	$r5 = ADD $load0 $zero
+	BEQ $r7 $zero EXIT
+	{
+		$alu0 = ADD $r5 $zero
+		mthd(DrawBaseInstance, incr=0)
+		emit($alu0) # (Unconditional write to DrawBaseInstance)
+	}
+	BEQ $r5 $zero .drawLoop # skip constbuf update if base instance is 0
+
+	# Update gl_BaseInstance
+	# It is assumed that the caller of this macro used SelectDriverConstbuf
+	# previously (unless the BaseInstance parameter is a constant zero)
+	{
+		$alu0 = ADD $r5 $zero
+		mthd(LoadConstbufOffset, incr=1)
+		emit(DriverCbufBaseInstance)
+		emit($alu0)
+	}
+
+.drawLoop
+	# Draw current instance
+	{
+		$alu0 = ADD $r1 $zero
+		$alu1 = ADD $r6 $zero
+		mthd(VertexBeginGl, incr=0)
+		emit($alu0)
+		mthd(DrawArraysCount, incr=0)
+		emit($alu1)
+	}
+
+	# Decrement instance counter and loop if there are more instances to draw
+	{
+		$r7 = SUB $r7 $r2
+		$r1 = MERGE $r1 $r2 (dst_pos=VertexBeginGlInstanceNext_Shift, bits=2, src_pos=0) # i.e. set InstanceNext and clear InstanceCont
+		mthd(VertexEndGl, incr=0)
+		emit(0)
+	}
+	BNE $r7 $zero .drawLoop
+
+	# We're done. Reset gl_BaseInstance back to 0 if needed
+	BEQ $r5 $zero EXIT
+	*{
+		$alu0 = ADD $zero $zero
+		mthd(LoadConstbufOffset, incr=1)
+		emit(DriverCbufBaseInstance)
+		emit($alu0)
+	}
+	nop
+
+# Indexed single-draw
+# Arguments:
+# - 0: Primitive
+# - 1: Index count
+# - 2: Instance count
+# - 3: First index
+# - 4: Vertex offset (updates gl_BaseVertex)
+# - 5: First instance (updates gl_BaseInstance)
+DrawIndexed::
+	{
+		$r1 = ADD $load0 $zero # primitive
+		$r6 = ADD $load1 $zero # index count
+	}
+	{
+		$r7 = ADD $load0 $zero # instance count
+		$r2 = ADD $zero 1      # needed for later
+		mthd(DrawElementsFirst, incr=0)
+		emit($load1)           # first index
+	}
+	{
+		$r3 = ADD $load0 $zero # vertex offset
+		$r4 = ADD $load1 $zero # first instance
+	}
+	BEQ $r7 $zero EXIT # Early exit if instance count is zero
+	{
+		$alu0 = ADD $r3 $zero
+		$alu1 = ADD $r4 $zero
+		mthd(DrawBaseVertex, incr=1)
+		emit($alu0) # Update DrawBaseVertex
+		emit($alu1) # Update DrawBaseInstance
+	}
+	{
+		$alu0 = ADD $r3 $zero
+		$r5 = OR $r3 $r4
+		mthd(VertexIdBase, incr=0)
+		emit($alu0) # Update VertexIdBase
+	}
+	BEQ $r5 $zero .drawLoop # Skip constbuf update if vertex offset and first instance are both zero
+
+	# Update gl_BaseVertex and gl_BaseInstance in the deko3d driver constbuf
+	# It is assumed that the caller of this macro used SelectDriverConstbuf
+	# previously (unless said parameters are a constant zero)
+	{
+		$alu0 = ADD $r3 $zero
+		mthd(LoadConstbufOffset, incr=1)
+		emit(DriverCbufBaseVertex)
+		emit($alu0)
+	}
+	{
+		$alu0 = ADD $r4 $zero
+		emit($alu0)
+	}
+
+.drawLoop
+	# Draw current instance
+	{
+		$alu0 = ADD $r1 $zero
+		$alu1 = ADD $r6 $zero
+		mthd(VertexBeginGl, incr=0)
+		emit($alu0)
+		mthd(DrawElementsCount, incr=0)
+		emit($alu1)
+	}
+
+	# Decrement instance counter and loop if there are more instances to draw
+	{
+		$r7 = SUB $r7 $r2
+		$r1 = MERGE $r1 $r2 (dst_pos=VertexBeginGlInstanceNext_Shift, bits=2, src_pos=0) # i.e. set InstanceNext and clear InstanceCont
+		mthd(VertexEndGl, incr=0)
+		emit(0)
+	}
+	BNE $r7 $zero .drawLoop
+
+	# We're done; now reset gl_BaseVertex and gl_BaseInstance back to 0 if needed
+	BEQ $r5 $zero .resetBaseVertex
+	{
+		$alu0 = ADD $zero $zero
+		mthd(LoadConstbufOffset, incr=1)
+		emit(DriverCbufBaseVertex)
+		emit($alu0)
+	}
+	{
+		$alu0 = ADD $zero $zero
+		emit($alu0)
+	}
+.resetBaseVertex
+	*{
+		mthd(DrawBaseVertex, incr=0) # just in case reset this
+		emit(0)
+		mthd(VertexIdBase, incr=0)   # and this too
+		emit(0)
+	}
+	nop
