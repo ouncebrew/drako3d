@@ -271,7 +271,7 @@ void dkCmdBufBindRenderTargets(DkCmdBuf obj, DkImageView const* const colorTarge
 		w << CmdInline(3D, ZcullWindowOffsetX{}, 0);
 		w << CmdInline(3D, ZcullWindowOffsetY{}, 0);
 		w << CmdInline(3D, ZcullUnknown0{}, 0);
-		w << CmdInline(3D, ZcullUnkFeatureEnable{}, 0);
+		w << CmdInline(3D, ZcullSubregion{}, 0);
 		w << Macro(ConditionalZcullInvalidate, rt.m_iova >> 8);
 		// mme scratch "weird zcull feature enable" is set here
 

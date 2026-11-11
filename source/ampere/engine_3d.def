@@ -41,9 +41,10 @@ engine _3D 0xC797;
 
 0x0b8 SurfaceDecompress;
 
-// Not ZcullUnkFeatureEnable on T239 (now SetShaderLocalMemoryNonThrottledB)
-// TODO(S2): find the new ZcullUnkFeatureEnable offset
-0x0BA ZcullUnkFeatureEnable bool;
+0x0BA ZcullSubregion bits (
+	0     Enable bool;
+	4..27 NormalizedAliquots;
+);
 0x0BB Unknown0bb;
 
 0x0c0 Unknown0c0;
