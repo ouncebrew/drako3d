@@ -27,6 +27,7 @@
 #define NVDEV_CH_SET_ENGINE          NVDEV_IOC(1, 0x04, 0x48, 0x20)
 
 #define NVDEV_TSG_BIND_CHANNEL_EX    NVDEV_IOC(3, 0x18, 0x54, 0x0B)
+#define NVDEV_TSG_READ_SM_ERROR      NVDEV_IOC(3, 0x18, 0x54, 0x0C)
 
 #define NVDEV_DEV_GPU     "/dev/nvhost-gpu"
 #define NVDEV_DEV_TSG_GPU "/dev/nvhost-tsg-gpu"

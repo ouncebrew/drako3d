@@ -64,6 +64,41 @@ namespace
 	}
 }
 
+namespace
+{
+	struct SmErrorRecord
+	{
+		u32 globalEsr;
+		u32 warpEsr;
+		u64 warpEsrPc;
+		u32 globalEsrReportMask;
+		u32 warpEsrReportMask;
+	};
+
+	void reportSmErrors(u32 tsgFd, u32 numSms)
+	{
+		bool any = false;
+		for (u32 sm = 0; sm < numSms && sm < 64; sm ++)
+		{
+			u64 args[3] = { sm, 0, sizeof(SmErrorRecord) };
+			SmErrorRecord rec = {};
+			Result rc = nvIoctl3(tsgFd, NVDEV_TSG_READ_SM_ERROR, args, &rec, sizeof(rec));
+			if (R_FAILED(rc))
+			{
+				DK_WARNING("  SM error state: read failed for SM %u (rc 0x%x)", sm, rc);
+				return;
+			}
+			if (!rec.globalEsr && !rec.warpEsr && !rec.warpEsrPc)
+				continue;
+			any = true;
+			DK_WARNING("  SM %u: global_esr 0x%08x warp_esr 0x%08x pc 0x%010lx (masks 0x%08x 0x%08x)", sm,
+				rec.globalEsr, rec.warpEsr, rec.warpEsrPc, rec.globalEsrReportMask, rec.warpEsrReportMask);
+		}
+		if (!any)
+			DK_WARNING("  SM error state: clear on all %u SMs", numSms);
+	}
+}
+
 void Device::checkQueueErrors() noexcept
 {
 	MutexHolder m{m_queueTableMutex};
@@ -125,6 +160,8 @@ bool Queue::checkError()
 				break;
 		}
 	}
+
+	reportSmErrors((u32)m_gpuChannel.object_id, getDevice()->getGpuInfo().numSms);
 
 	// Update the semaphore with the most recent value so that any users who are waiting
 	// for work in this failed queue to complete are allowed to end the wait
