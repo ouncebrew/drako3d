@@ -8,6 +8,7 @@
 #include "engine_2d.h"
 #include "engine_copy.h"
 #include "engine_gpfifo.h"
+#include <l2_cache_ops.h>
 
 using namespace maxwell;
 using namespace dk::detail;
@@ -50,7 +51,7 @@ void dkCmdBufBarrier(DkCmdBuf obj, DkBarrier mode, uint32_t invalidateFlags)
 {
 	DK_ENTRYPOINT(obj);
 	CmdBufWriter w{obj};
-	w.reserve(12);
+	w.reserve(8 + 2*L2CacheOpSize);
 
 	bool needsWfi = false;
 	switch (mode)
@@ -103,9 +104,8 @@ void dkCmdBufBarrier(DkCmdBuf obj, DkBarrier mode, uint32_t invalidateFlags)
 
 	if (invalidateFlags & DkInvalidateFlags_L2Cache)
 	{
-		using Op = EngineGpfifo::MemOpB::Operation;
-		w << Cmd(Gpfifo, MemOpB{}, Op::L2FlushDirty);
-		w << Cmd(Gpfifo, MemOpB{}, Op::L2SysmemInvalidate);
+		w << CmdL2FlushDirty();
+		w << CmdL2SysmemInvalidate();
 	}
 
 	// For DkBarrier_Full, we sign off a gpfifo entry with the NoPrefetch bit set.

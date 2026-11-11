@@ -7,6 +7,7 @@
 
 #include "engine_3d.h"
 #include "engine_gpfifo.h"
+#include "l2_cache_ops.h"
 
 using namespace maxwell;
 using namespace dk::detail;
@@ -406,12 +407,17 @@ void Queue::signalFence(DkFence& fence, bool flush)
 	{
 		using S = Engine3D::SetReportSemaphore;
 		CmdBufWriter w{&m_cmdBuf};
-		w.reserve(8);
+		w.reserve(9 + L2CacheOpSize);
 
 		m_gpuChannel.fence_incr = 1;
 		fence.m_internal.m_semaphoreValue = getDevice()->incrSemaphoreValue(m_id);
 
 		w << CmdInline(3D, UnknownFlush{}, 0);
+		if (flush)
+		{
+			w << Cmd(Gpfifo, Wfi{}, EngineGpfifo::Wfi::Scope::All);
+			w << CmdL2FlushDirty();
+		}
 		w << Cmd(3D, SetReportSemaphoreOffset{},
 			Iova(fence.m_internal.m_semaphoreAddr),
 			fence.m_internal.m_semaphoreValue,

@@ -237,10 +237,13 @@ void Queue::setup3DEngine()
 	}
 
 	w << Cmd(3D, TiledCacheTileSize{}, 0x80 | (0x80 << 16));
-	w << Cmd(3D, TiledCacheUnknownConfig0{}, 0x00001109);
-	w << Cmd(3D, TiledCacheUnknownConfig1{}, 0x08080202);
-	w << Cmd(3D, TiledCacheUnknownConfig2{}, 0x0000001F);
-	w << Cmd(3D, TiledCacheUnknownConfig3{}, 0x00080001);
+	if (drakoProbeFlags & DrakoProbe_TiledCacheConfig)
+	{
+		w << Cmd(3D, TiledCacheUnknownConfig0{}, 0x00001109);
+		w << Cmd(3D, TiledCacheUnknownConfig1{}, 0x08080202);
+		w << Cmd(3D, TiledCacheUnknownConfig2{}, 0x0000001F);
+		w << Cmd(3D, TiledCacheUnknownConfig3{}, 0x00080001);
+	}
 	w << CmdInline(3D, TiledCacheUnkFeatureEnable{}, 0);
 }
 

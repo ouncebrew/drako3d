@@ -34,24 +34,25 @@ engine Gpfifo 0xC36F;
 	);
 );
 
-0x00B MemOpB bits (
-	0..7 OperandHigh;
+0x00A MemOpA;
+0x00B MemOpB;
+0x00C MemOpC bits (
+	0..2 MembarType enum (
+		0 SysMembar;
+		1 Membar;
+	);
+);
+0x00D MemOpD bits (
 	27..31 Operation enum (
-		5  SysMemBarFlush;
-		6  SoftFlush;
+		5  Membar;
 		9  MmuTlbInvalidate;
+		10 MmuTlbInvalidateTargeted;
 		13 L2PeerMemInvalidate;
 		14 L2SysmemInvalidate;
 		15 L2CleanComptags;
 		16 L2FlushDirty;
+		21 L2WaitForSysPendingReads;
 	);
-
-	// These two fields are presumably only used for MmuTlbInvalidate
-	0 MmuTlbInvalidatePdb enum (
-		0 One;
-		1 All;
-	);
-	1 MmuTlbInvalidateGpc bool;
 );
 
 0x014 SetReference;
@@ -64,4 +65,11 @@ engine Gpfifo 0xC36F;
 	);
 	4 WaitSwitch bool;
 	8..15 SyncptIndex;
+);
+
+0x01E Wfi bits (
+	0 Scope enum (
+		0 Current;
+		1 All;
+	);
 );
