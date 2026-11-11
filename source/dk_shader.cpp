@@ -77,6 +77,7 @@ void dkShaderInitialize(DkShader* obj, DkShaderMaker const* maker)
 	obj->m_id    = getNewProgramId();
 	obj->m_hdr   = progHdr;
 	obj->m_cbuf1IovaShift8 = (blk->getGpuAddrPitch() + codeBaseOffset + obj->m_hdr.constbuf1_off) >> 8;
+	obj->m_codeSize = phdr->code_sz - obj->m_hdr.entrypoint;
 
 	// Fix up code/data offsets
 	codeBaseOffset += blk->getCodeSegOffset();

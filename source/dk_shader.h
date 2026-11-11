@@ -12,6 +12,7 @@ struct Shader
 	DkStage  m_stage;
 	uint32_t m_id;
 	uint32_t m_cbuf1IovaShift8;
+	uint32_t m_codeSize;
 	DkshProgramHeader m_hdr;
 };
 

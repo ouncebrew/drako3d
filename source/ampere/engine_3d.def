@@ -773,6 +773,7 @@ engine _3D 0xC797;
 	);
 	0x03 NumRegisters;
 	0x05 Address iova;
+	0x07 ProgramPrefetch bits (0..6 SizeInBlocks;);
 	0x10 next;
 );
 

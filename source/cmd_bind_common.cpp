@@ -100,6 +100,11 @@ void dkCmdBufBindShaders(DkCmdBuf obj, uint32_t stageMask, DkShader const* const
 
 		uint32_t sizeReq = 7;
 		auto& hdr = shader->m_hdr;
+#if DK_GPU_AMPERE
+		bool hasPrefetch = shader->m_stage == DkStage_Vertex || shader->m_stage == DkStage_Fragment;
+		if (hasPrefetch)
+			sizeReq += 1;
+#endif
 		switch (shader->m_stage)
 		{
 			default:
@@ -134,6 +139,15 @@ void dkCmdBufBindShaders(DkCmdBuf obj, uint32_t stageMask, DkShader const* const
 			(hdr.constbuf1_sz + 0xFF) &~ 0xFF,
 			shader->m_cbuf1IovaShift8
 		);
+
+#if DK_GPU_AMPERE
+		if (hasPrefetch)
+		{
+			uint32_t prefetchSize = shader->m_codeSize < 0x4000 ? shader->m_codeSize : 0x4000;
+			w << CmdInline(3D, SetProgram::ProgramPrefetch{1+unsigned(shader->m_stage)},
+				Engine3D::SetProgram::ProgramPrefetch::SizeInBlocks{(prefetchSize + 0xFF) >> 8});
+		}
+#endif
 
 		switch (shader->m_stage)
 		{
