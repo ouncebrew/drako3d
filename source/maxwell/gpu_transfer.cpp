@@ -7,6 +7,7 @@
 #include "engine_2d.h"
 #include "engine_copy.h"
 #include "engine_inline.h"
+#include <twod_limits.h>
 
 using namespace maxwell;
 using namespace dk::detail;
@@ -116,10 +117,30 @@ void dk::detail::BlitCopyEngine(DkCmdBuf obj, ImageInfo const& src, ImageInfo co
 	w << Cmd(Copy, LaunchDma{}, copyFlags);
 }
 
-void dk::detail::Blit2DEngine(DkCmdBuf obj, ImageInfo const& src, ImageInfo const& dst, BlitParams const& params, int32_t dudx, int32_t dvdy, uint32_t flags, uint32_t factor)
+static uint32_t alignPitchSurface(ImageInfo& info)
+{
+	uint32_t misalign = info.m_iova & (TwodPitchOffsetAlign - 1);
+	if (!info.m_isLinear || !misalign)
+		return 0;
+	uint32_t shift = misalign / info.m_bytesPerBlock;
+	info.m_iova -= misalign;
+	info.m_width += shift;
+	return shift;
+}
+
+void dk::detail::Blit2DEngine(DkCmdBuf obj, ImageInfo const& origSrc, ImageInfo const& origDst, BlitParams const& origParams, int32_t dudx, int32_t dvdy, uint32_t flags, uint32_t factor)
 {
 	CmdBufWriter w{obj};
 	w.reserve((3 + 10*2 + 1) + 14);
+
+	ImageInfo src = origSrc, dst = origDst;
+	BlitParams params = origParams;
+	uint32_t srcShift = alignPitchSurface(src);
+	uint32_t dstShift = alignPitchSurface(dst);
+	params.srcX += srcShift << SrcFractBits;
+	params.dstX += dstShift;
+	if (srcShift || dstShift)
+		flags |= Blit2D_SetupEngine;
 
 	if (flags & Blit2D_SetupEngine)
 	{
