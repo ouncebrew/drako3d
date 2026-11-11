@@ -545,10 +545,10 @@ void dkCmdBufCopyImage(DkCmdBuf obj, DkImageView const* srcView, DkImageRect con
 
 	for (uint32_t z = 0; z < dstRect->depth; z ++)
 	{
-		uint32_t srcZ = z;
+		uint32_t srcZ = srcRect->z + z;
 		uint32_t dstZ = dstRect->z + z;
 		if (flags & DkBlitFlag_FlipZ)
-			srcZ = dstRect->depth - z - 1;
+			srcZ = srcRect->z + dstRect->depth - z - 1;
 		BlitCopyEngine(obj, srcInfo, dstInfo, params, srcZ, dstZ);
 	}
 }
@@ -594,8 +594,8 @@ void dkCmdBufBlitImage(DkCmdBuf obj, DkImageView const* srcView, DkImageRect con
 		uint32_t blockH = srcView->pImage->m_blockH;
 		params.srcX = adjustBlockSize(params.srcX, blockW);
 		params.srcY = adjustBlockSize(params.srcY, blockH);
-		params.srcX = adjustBlockSize(params.dstX, blockW);
-		params.srcY = adjustBlockSize(params.dstY, blockH);
+		params.dstX = adjustBlockSize(params.dstX, blockW);
+		params.dstY = adjustBlockSize(params.dstY, blockH);
 		params.width = adjustBlockSize(params.width, blockW);
 		params.height = adjustBlockSize(params.height, blockH);
 		srcW = adjustBlockSize(srcW, blockW);
@@ -879,13 +879,13 @@ void dkCmdBufCopyImageToBuffer(DkCmdBuf obj, DkImageView const* srcView, DkImage
 
 		if (flags & DkBlitFlag_FlipX)
 		{
-			params.srcX = params.width;
+			params.srcX += params.width;
 			dudx = -1;
 		}
 
 		if (flags & DkBlitFlag_FlipY)
 		{
-			params.srcY = params.height;
+			params.srcY += params.height;
 			dvdy = -1;
 		}
 
@@ -896,7 +896,7 @@ void dkCmdBufCopyImageToBuffer(DkCmdBuf obj, DkImageView const* srcView, DkImage
 		if (srcRect->z)
 			srcInfo.m_iova += srcRect->z * srcInfo.m_layerStride;
 
-		int64_t srcLayerStride = dstInfo.m_layerStride;
+		int64_t srcLayerStride = srcInfo.m_layerStride;
 		if (flags & DkBlitFlag_FlipZ)
 		{
 			srcInfo.m_iova += (srcRect->depth - 1) * srcInfo.m_layerStride;
@@ -907,7 +907,7 @@ void dkCmdBufCopyImageToBuffer(DkCmdBuf obj, DkImageView const* srcView, DkImage
 		{
 			Blit2DEngine(obj, srcInfo, dstInfo, params, dudx<<DiffFractBits, dvdy<<DiffFractBits, blitFlags, 0);
 			srcInfo.m_iova += srcLayerStride;
-			dstInfo.m_iova += srcInfo.m_layerStride;
+			dstInfo.m_iova += dstInfo.m_layerStride;
 			blitFlags &= ~Blit2D_SetupEngine;
 		}
 	}
@@ -924,7 +924,7 @@ void dkCmdBufCopyImageToBuffer(DkCmdBuf obj, DkImageView const* srcView, DkImage
 			uint32_t srcZ = srcRect->z + z;
 			uint32_t dstZ = z;
 			if (flags & DkBlitFlag_FlipZ)
-				srcZ = srcRect->depth - z - 1;
+				srcZ = srcRect->z + srcRect->depth - z - 1;
 			BlitCopyEngine(obj, srcInfo, dstInfo, params, srcZ, dstZ);
 		}
 	}
