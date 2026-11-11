@@ -80,7 +80,6 @@ void dkSamplerDescriptorInitialize(DkSamplerDescriptor* obj, DkSampler const* sa
 
 	obj->mag_filter = sampler->magFilter;
 	obj->min_filter = sampler->minFilter;
-	// TODO(S2): NVN always emits 1 here with mip filter encoding unverified
 	obj->mip_filter = sampler->mipFilter;
 	obj->cubemap_anisotropy = 1;
 	obj->cubemap_interface_filtering = 1;

@@ -16,12 +16,12 @@ struct TextureImageControl
 	uint32_t address_low;
 
 	// 0x08
-	uint32_t address_high          : 16;
-	uint32_t view_layer_base_3_7   : 5;
+	uint32_t address_high          : 17;
+	uint32_t                       : 4;
 	uint32_t hdr_version           : 3;
 	uint32_t load_store_hint_maybe : 1;
 	uint32_t view_coherency_hash   : 4;
-	uint32_t view_layer_base_8_10  : 3;
+	uint32_t                       : 3;
 
 	// 0x0C
 	union
@@ -50,7 +50,7 @@ struct TextureImageControl
 
 	// 0x10
 	uint32_t width_minus_one       : 17;
-	uint32_t                       : 1;
+	uint32_t depth_minus_one_14    : 1;
 	uint32_t height_minus_one_16   : 1;
 	uint32_t aniso_spread_max_log2 : 3;
 	uint32_t is_sRGB               : 1;

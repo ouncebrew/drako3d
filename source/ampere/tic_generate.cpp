@@ -122,7 +122,6 @@ void dkImageDescriptorInitialize(DkImageDescriptor* obj, DkImageView const* view
 
 	if (type == DkImageType_Buffer)
 	{
-		// TODO(S2): buffer width split unverified
 		obj->width_minus_one_16_31 = (width - 1) >> 16;
 		obj->width_minus_one       = (width - 1) & 0xFFFF;
 	}
@@ -152,6 +151,7 @@ void dkImageDescriptorInitialize(DkImageDescriptor* obj, DkImageView const* view
 		obj->height_minus_one = height - 1;
 		obj->height_minus_one_16 = (height - 1) >> 16;
 		obj->depth_minus_one = depth - 1;
+		obj->depth_minus_one_14 = (depth - 1) >> 14;
 		obj->sparse_tile_width_gobs_log2 = image->m_tileW;
 		obj->aniso_coarse_spread_modifier = AnisoSpreadModifier_None;
 		obj->aniso_spread_scale = 0;
@@ -182,7 +182,4 @@ void dkImageDescriptorInitialize(DkImageDescriptor* obj, DkImageView const* view
 
 	obj->load_store_hint_maybe = usesLoadOrStore;
 	obj->is_sparse = 0; // Not supported yet
-	// TODO(S2): these may be obsolete now that the layer offset is in the address
-	obj->view_layer_base_3_7  = view->layerOffset >> 3;
-	obj->view_layer_base_8_10 = view->layerOffset >> 8;
 }
