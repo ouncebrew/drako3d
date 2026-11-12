@@ -1,5 +1,5 @@
 #include <switch.h>
-#include <deko3d.h>
+#include <drako3d.h>
 #include "image_formats.h"
 
 using namespace maxwell;

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <switch.h>
-#include <deko3d.h>
+#include <drako3d.h>
 
 #define DK_WEAK __attribute__((weak))
 

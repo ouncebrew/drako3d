@@ -19,7 +19,7 @@ namespace
 	{
 		if (result != DkResult_Success)
 		{
-			fprintf(stderr, "{FATAL} deko3d error (%d) in %s - %s\n", result, context, message);
+			fprintf(stderr, "{FATAL} drako3d error (%d) in %s - %s\n", result, context, message);
 
 			ErrorApplicationConfig c;
 			errorApplicationCreate(&c, context, message);
@@ -30,7 +30,7 @@ namespace
 			exit(1);
 		}
 		else
-			fprintf(stderr, "deko3d warning in %s: %s\n", context, message);
+			fprintf(stderr, "drako3d warning in %s: %s\n", context, message);
 	}
 #endif
 

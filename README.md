@@ -14,7 +14,7 @@ In conclusion, drako3d is the homebrew answer to Nintendo and Nvidia's proprieta
 
 ## Current status
 
-drako3d is currently wip, but it should support everything deko3d does on Switch 1. The public API (`deko3d.h` / `deko3d.hpp`, `Dk*` / `dk::` names) is unchanged from deko3d, and the library can still be built for the original Switch (GM20B) with `GPU_ARCH=maxwell`, however, this is a first and foremost Switch 2 project. If you are exclusively targeting Switch 1 then you should really just use deko3d.
+drako3d is currently wip, but it should support everything drako3d does on Switch 1. The public API (`drako3d.h` / `drako3d.hpp`, `Dk*` / `dk::` names) is unchanged from deko3d, and the library can still be built for the original Switch (GM20B) with `GPU_ARCH=maxwell`, however, this is a first and foremost Switch 2 project. If you are exclusively targeting Switch 1 then you should really just use deko3d.
 
 ### Working
 
@@ -39,7 +39,7 @@ drako3d is currently wip, but it should support everything deko3d does on Switch
 
 ## Building
 
-Building drako3d requires devkitPro, [drakotools](https://github.com/ouncebrew/drakotools) (`dekodef` and `dekomme`) on your `PATH`, and either libounce (Switch 2) or libnx (Switch 1).
+Building drako3d requires devkitPro, [drakotools](https://github.com/ouncebrew/drakotools) (`drakodef` and `drakomme`) on your `PATH`, and either libounce (Switch 2) or libnx (Switch 1).
 
 	make                    # Switch 2 (GA10F)
 	make GPU_ARCH=maxwell   # Switch 1 (GM20B)
@@ -57,7 +57,7 @@ However, it is more than likely once more has been finalised with UAM2, that som
 
 ### Is this a clone of NVN2?
 
-drako3d is not a clone of NVN2 just as deko3d wasn't a clone of NVN. However, drako3d was developed as a result of NVN2 reverse engineering work, and as such it borrows many implementation ideas. Essentially, deko3d was designed to fulfill the same place in homebrew that NVN does in official software.
+drako3d is not a clone of NVN2 just as drako3d wasn't a clone of NVN. However, drako3d was developed as a result of NVN2 reverse engineering work, and as such it borrows many implementation ideas. Essentially, drako3d was designed to fulfill the same place in homebrew that NVN does in official software.
 
 ### Why and when should I use drako3d instead of kaiHEN's OpenGL/Vulkan drivers?
 
@@ -78,13 +78,13 @@ Mostly just to differentiate which iteration of NVN that I'm referring to. Inter
 - A Switch 2 shader compiler
 - FP16/HDR swapchains (requires libounce to support them too)
 
-Most of deko3d's open items still apply as well.
+Most of drako3d's open items still apply as well.
 
 ## Credits and acknowledgements
 
 drako3d is presently developed and maintained by **PalindromicBreadLoaf**.<br>
 In no particular order, I would like to credit the following people:
-- [fincs](https://github.com/fincs) from [devkitPro](https://devkitpro.org/) for creating deko3d, the basis of drako3d. Without him this project wouldn't exist and I wouldn't be where I am.
+- [fincs](https://github.com/fincs) from [devkitPro](https://devkitpro.org/) for creating deko3d, the basis of deko3d. Without him this project wouldn't exist and I wouldn't be where I am.
 - [souldbminer](https://github.com/souldbminerr) from [Horizon OC](https://github.com/Horizon-OC) for overall being supportive and getting me further into this whole mess :).
 - [WinterMute](https://github.com/WinterMute) from [devkitPro](https://devkitpro.org/) for making the homebrew dream a reality through their incredible toolchains and ecosystem.
 - [plutoo](https://github.com/plutooo) from [switchbrew](https://github.com/switchbrew) for kickstarting GPU and NVN reverse engineering efforts.

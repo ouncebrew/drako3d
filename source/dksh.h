@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-// deko3d shader module file format
+// drako3d shader module file format
 // File extension: .dksh
 // The file is composed of two sections, both whose size is a multiple of 256 bytes:
 // - Control section, containing shader information/metadata

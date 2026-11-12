@@ -1,20 +1,20 @@
-# deko3d Primer - A Small Introduction
+# drako3d Primer - A Small Introduction
 
 ## Introduction
 
-deko3d is a low level graphics programming API for use in Nintendo Switch homebrew (along with devkitA64 and libnx), taking inspiration from Vulkan and drawing many similarities stemming from a year-and-a-half long (and still ongoing!) reverse engineering (RE) effort centered around the official NVN library present in official software.
+drako3d is a low level graphics programming API for use in Nintendo Switch homebrew (along with devkitA64 and libnx), taking inspiration from Vulkan and drawing many similarities stemming from a year-and-a-half long (and still ongoing!) reverse engineering (RE) effort centered around the official NVN library present in official software.
 
 This primer is meant to show potential users of this library around the key foundations of its design, as well as several usage tips and hints that have been discovered throughout the RE and development process.
 
-Familiarity with graphics APIs (mostly Vulkan and OpenGL) and 3D graphics programming in general are indicated as basic requirements to make the most out of deko3d and be able to understand this primer.
+Familiarity with graphics APIs (mostly Vulkan and OpenGL) and 3D graphics programming in general are indicated as basic requirements to make the most out of drako3d and be able to understand this primer.
 
-> **Warning**: This document is hugely under construction and it is by no means complete. It is recommended to read the deko3d.h header and study carefully the provided examples in the meantime.
+> **Warning**: This document is hugely under construction and it is by no means complete. It is recommended to read the drako3d.h header and study carefully the provided examples in the meantime.
 
 ## Library Structure and Basic Concepts
 
 ### Objects
 
-deko3d is written in the C++ language, however its API is accessible from both plain C and with a convenient C++ wrapper modeled after Vulkan-Hpp. The API is object oriented, and each class of object can belong to one of the following categories according to their nature:
+drako3d is written in the C++ language, however its API is accessible from both plain C and with a convenient C++ wrapper modeled after Vulkan-Hpp. The API is object oriented, and each class of object can belong to one of the following categories according to their nature:
 
 - **Handles**: objects of this type are represented by a single pointer sized value that acts as a handle. These objects hold state which involves the ownership of resources of some kind (GPU channels, memory allocations, etc), and there exists a function to destroy the object and free up all resources consumed by it. Memory needed to store this type of object is internally managed by the library, and no further user intervention other than storing/destroying the handle is required.
 	- `DkDevice`
@@ -153,12 +153,12 @@ dk::SamplerDescriptor descr;
 descr.initialize(sampler);
 ```
 
-### Linking to deko3d
+### Linking to drako3d
 
 There exist two different compiled versions of the library:
 
-- `libdeko3dd.a`: This is the **Debug** version, which acts as a validation layer with parameter and state checking built-in. In order to link to it specify `-ldeko3dd` in the LIBS section of your Makefile.
-- `libdeko3d.a`: This is the **Release** version; which omits parameter and state checking and is built with extra optimizations. In order to link to it specify `-ldeko3d` in the LIBS section of your Makefile.
+- `libdrako3dd.a`: This is the **Debug** version, which acts as a validation layer with parameter and state checking built-in. In order to link to it specify `-ldrako3dd` in the LIBS section of your Makefile.
+- `libdrako3d.a`: This is the **Release** version; which omits parameter and state checking and is built with extra optimizations. In order to link to it specify `-ldrako3d` in the LIBS section of your Makefile.
 
 During development or experimentation it is recommended to link to the Debug version; when it is time to ship a precompiled binary of your application the Release version should be used instead.
 
@@ -187,14 +187,14 @@ uint64_t dkDeviceGetCurrentTimestamp(DkDevice obj);
 uint64_t dkDeviceGetCurrentTimestampInNs(DkDevice obj);
 ```
 
-`DkDevice` is the root object from which most other deko3d objects can be traced back. It represents the GPU device with a private virtual GPU address space, and provides optional mechanisms for customizing the error handling or memory allocation behavior.
+`DkDevice` is the root object from which most other drako3d objects can be traced back. It represents the GPU device with a private virtual GPU address space, and provides optional mechanisms for customizing the error handling or memory allocation behavior.
 
 Field      | Default   | Description
 -----------|-----------|------------------
 `userData` | NULL      | User specified data to be passed to the callbacks
 `cbDebug`  | NULL      | Optional callback used by the debug version of the library.
-`cbAlloc`  | NULL      | Optional callback used when deko3d needs to allocate memory
-`cbFree`   | NULL      | Optional callback used when deko3d needs to free allocated memory
+`cbAlloc`  | NULL      | Optional callback used when drako3d needs to allocate memory
+`cbFree`   | NULL      | Optional callback used when drako3d needs to free allocated memory
 `flags`    | See below | Device creation flags (see below)
 
 `DkDeviceFlags_*`    | Default | Description
@@ -206,18 +206,18 @@ Field      | Default   | Description
 `YAxisPointsUp`      | ✓       | Clip space Y axis points up like OpenGL/Direct3D/Metal
 `YAxisPointsDown`    |         | Clip space Y axis points down like Vulkan
 
-The debugging version of the library can use an optional callback (`cbDebug`). There are two situations in which deko3d makes usage of the debug callback:
+The debugging version of the library can use an optional callback (`cbDebug`). There are two situations in which drako3d makes usage of the debug callback:
 
-- Warnings: a suboptimal situation is detected, and deko3d calls the callback with `DkResult_Success` as the result parameter. This is a non-fatal invocation which keeps the application running afterwards.
+- Warnings: a suboptimal situation is detected, and drako3d calls the callback with `DkResult_Success` as the result parameter. This is a non-fatal invocation which keeps the application running afterwards.
 - Errors: a certain parameter/state validation check fails, or an unrecoverable system/GPU error occurs. In this situation the result parameter is different from `DkResult_Success`, and the debug callback is expected to not return.
 
-In both cases, the `context` parameter is a string indicating the name of the most recently called deko3d entrypoint, while `message` is a string containing additional information to be used for debugging purposes.
+In both cases, the `context` parameter is a string indicating the name of the most recently called drako3d entrypoint, while `message` is a string containing additional information to be used for debugging purposes.
 
-If no debugging callback has been supplied (or if the callback returns during error handling), deko3d outputs information to stderr. In the case of errors, an error message is displayed on the screen using the error applet, and the application forcefully closes back to the HOME menu.
+If no debugging callback has been supplied (or if the callback returns during error handling), drako3d outputs information to stderr. In the case of errors, an error message is displayed on the screen using the error applet, and the application forcefully closes back to the HOME menu.
 
-In the release version of deko3d, warnings and parameter/state validation don't exist. However, if unrecoverable errors happen, a Fatal system error is forcefully thrown. The release version of deko3d does not make use of `cbDebug` *at all*.
+In the release version of drako3d, warnings and parameter/state validation don't exist. However, if unrecoverable errors happen, a Fatal system error is forcefully thrown. The release version of drako3d does not make use of `cbDebug` *at all*.
 
-By default if memory allocation callbacks are not provided, deko3d uses the standard heap (i.e. malloc/free) for dynamic memory allocations.
+By default if memory allocation callbacks are not provided, drako3d uses the standard heap (i.e. malloc/free) for dynamic memory allocations.
 
 `gl_FragCoord` in fragment shaders obeys the device origin mode when it comes to the Y axis and has pixel centers at half-integers, *with GLSL layout qualifiers having absolutely no effect*.
 Please also note that the origin mode and clip space Y axis orientation can be configured independently of each other. Clip space X and Y are both in the range [-1, 1] as well.
@@ -243,14 +243,14 @@ uint32_t dkMemBlockGetSize(DkMemBlock obj);
 DkResult dkMemBlockFlushCpuCache(DkMemBlock obj, uint32_t offset, uint32_t size);
 ```
 
-`DkMemBlock` is an object that represents a block of memory holding resources that will be used with deko3d, such as GPU command lists, shader code, framebuffers, textures, vertex data, etc. The following settings can be configured during creation:
+`DkMemBlock` is an object that represents a block of memory holding resources that will be used with drako3d, such as GPU command lists, shader code, framebuffers, textures, vertex data, etc. The following settings can be configured during creation:
 
 Field     | Default   | Description
 ----------|-----------|------------
 `device`  | N/A       | Parent device
 `size`    | N/A       | Size of the memory block (needs to be a multiple of `DK_MEMBLOCK_ALIGNMENT`)
 `flags`   | See below | Memory block properties and configuration (see below)
-`storage` | NULL      | Optional explicit storage buffer (needs to be aligned to `DK_MEMBLOCK_ALIGNMENT`). If NULL, deko3d will allocate (and destroy) the buffer using the parent device's memory allocation system.
+`storage` | NULL      | Optional explicit storage buffer (needs to be aligned to `DK_MEMBLOCK_ALIGNMENT`). If NULL, drako3d will allocate (and destroy) the buffer using the parent device's memory allocation system.
 
 `DkMemBlockFlags_*` | Default | Description
 --------------------|---------|------------
@@ -284,7 +284,7 @@ Memory blocks with GPU access can end up having several different mappings in th
 
 > **Warning**: Due to a hardware bug the last `DK_SHADER_CODE_UNUSABLE_SIZE` bytes of a memory block are unusable for storing shader code.
 
-> **Warning**: Currently deko3d is unable to reuse previously-reserved mappings inside the *code segment* even if they're freed. Users are advised to reuse old code memory blocks instead of freeing them.
+> **Warning**: Currently drako3d is unable to reuse previously-reserved mappings inside the *code segment* even if they're freed. Users are advised to reuse old code memory blocks instead of freeing them.
 
 > **Note**: Memory blocks with CPU cacheability (`DkMemBlockFlags_CpuCached`) can be used. `dkMemBlockFlushCpuCache` can be used to flush the CPU-side cache (i.e. clean+invalidate), and after that point all writes done on the CPU become visible by GPU. However if the memory block also has GPU cacheability (`DkMemBlockFlags_GpuCached`) care must be taken so that the GPU side caches are invalidated before accessing the memory. There is also no support for invalidating the CPU-side cache as it is a dangerous (and privileged!) operation; so users should **avoid** using CpuCached memory for GPU->CPU communication.
 
@@ -336,7 +336,7 @@ Fences (`DkFence`) are opaque structs that contain GPU synchronization informati
 
 Usually fences will be used in a signaling command prior to being waited on. If fences are to be potentially waited on before they're signaled (e.g. if they're used to wait on previous work, with no previous work having been submitted yet), they should be initialized to zero in order to ensure that any initial waits will correctly have no effect.
 
-Synchronization between the GPU and external engines (video processing, display, etc) can be achieved through the `dkFenceImport` function, which provides a way of integrating Host1x syncpoint functionality within deko3d. The `id` and `value` parameters respectively represent the syncpt index, and the threshold at which the work associated with the fence can be considered as completed. Note that those values are usually allocated and managed by the driver. More information on syncpoints can be found in the Tegra TRM, chapter 14 ("Host Subsystem").
+Synchronization between the GPU and external engines (video processing, display, etc) can be achieved through the `dkFenceImport` function, which provides a way of integrating Host1x syncpoint functionality within drako3d. The `id` and `value` parameters respectively represent the syncpt index, and the threshold at which the work associated with the fence can be considered as completed. Note that those values are usually allocated and managed by the driver. More information on syncpoints can be found in the Tegra TRM, chapter 14 ("Host Subsystem").
 
 > **Warning**: Fence wait/signal commands recorded to a command list keep a pointer to the fence struct in the command buffer's bookkeeping memory. Please make sure the struct remains at the same valid memory address for the lifetime of the command list handle; otherwise submitting the command list handle to a queue will result in undefined behavior.
 
@@ -399,18 +399,18 @@ Field                      | Default                                  | Descript
 
 During creation, the intended usage of the queue can be specified. Essentially this entails enabling or disabling support for submitting command lists containing graphics or compute commands. If a certain usage bit is not specified, the queue does not reserve resources required for processing said types of commands. Submitting command lists containing commands of a certain type on a queue that has not been created with the corresponding usage bit results in undefined behavior. For example, it is illegal to run `dkCmdBufDispatchCompute` on a queue that does not have the `DkQueueFlags_Compute` flag set. Note that all queues are capable of running transfer commands.
 
-Queues internally generate commands for various purposes. The size of the memory fed to the internal command buffer used for this purpose can be controlled with the `commandMemorySize` field. The memory is managed as a ring buffer divided in a certain number of parts, guarded by a fence at every boundary acting as a checkpoint. deko3d will automatically wait on the required fences before overwriting previously written internal command data, however this entails blocking the CPU for periods of time while the GPU is processing work items. In order to mitigate this, deko3d automatically flushes the queue after a certain threshold (`flushThreshold`) of internal command memory has been consumed; so that the GPU can start tackling its pending work items, and by the time the fence must be waited on it's (hopefully) already signaled with the wait finishing immediately without blocking. A smaller threshold results in more frequent automatic flushes, while a larger threshold results in less flushes but more frequent situations in which the CPU is blocked waiting for the GPU; so users should exercise caution.
+Queues internally generate commands for various purposes. The size of the memory fed to the internal command buffer used for this purpose can be controlled with the `commandMemorySize` field. The memory is managed as a ring buffer divided in a certain number of parts, guarded by a fence at every boundary acting as a checkpoint. drako3d will automatically wait on the required fences before overwriting previously written internal command data, however this entails blocking the CPU for periods of time while the GPU is processing work items. In order to mitigate this, drako3d automatically flushes the queue after a certain threshold (`flushThreshold`) of internal command memory has been consumed; so that the GPU can start tackling its pending work items, and by the time the fence must be waited on it's (hopefully) already signaled with the wait finishing immediately without blocking. A smaller threshold results in more frequent automatic flushes, while a larger threshold results in less flushes but more frequent situations in which the CPU is blocked waiting for the GPU; so users should exercise caution.
 
 Queues manage their list of work items in a lazy fashion. In other words, the work items are enqueued in a list that is submitted to the GPU as a single batch in one go, and said submission does not actually happen until one of the following conditions are met:
 - `dkQueueFlush` is called, which signs off the batch of work items and submits it to the GPU. Note that `dkQueuePresentImage` internally calls `dkQueueFlush`.
 - Space runs out in the list, which necessitates a flush.
 - The flushing threshold for internal command memory (`flushThreshold`) is reached, which results in an automatic flush.
 
-After the queue is flushed, deko3d inserts a barrier that invalidates the image, shader, descriptor and L2 caches - in fact this is the very first work item that will be executed the *next* time the queue is flushed. This makes it possible to update graphical resources on the CPU such as vertex buffers or image/sampler descriptor sets between batches of work items submitted to the queue.
+After the queue is flushed, drako3d inserts a barrier that invalidates the image, shader, descriptor and L2 caches - in fact this is the very first work item that will be executed the *next* time the queue is flushed. This makes it possible to update graphical resources on the CPU such as vertex buffers or image/sampler descriptor sets between batches of work items submitted to the queue.
 
-If for some reason the GPU encounters an error while processing work items, the queue enters error state. This can be detected using `dkQueueIsInErrorState`. Once a queue enters error state it is completely toast, and the only legal operation on it is `dkQueueDestroy`. In addition, the debugging version of deko3d is able to print information about the GPU error using the warning mechanism provided by the debug callback.
+If for some reason the GPU encounters an error while processing work items, the queue enters error state. This can be detected using `dkQueueIsInErrorState`. Once a queue enters error state it is completely toast, and the only legal operation on it is `dkQueueDestroy`. In addition, the debugging version of drako3d is able to print information about the GPU error using the warning mechanism provided by the debug callback.
 
-> **Warning**: Even though deko3d can recover from GPU errors, the operating system seems to be programmed to kill processes that have crashed the GPU a few seconds afterwards. Currently it is not known if this behavior of the OS can be disabled. As a result, it is advised to avoid crashing the GPU if possible; otherwise a few seconds of grace are available in order to e.g. commit unsaved changes to persistent storage.
+> **Warning**: Even though drako3d can recover from GPU errors, the operating system seems to be programmed to kill processes that have crashed the GPU a few seconds afterwards. Currently it is not known if this behavior of the OS can be disabled. As a result, it is advised to avoid crashing the GPU if possible; otherwise a few seconds of grace are available in order to e.g. commit unsaved changes to persistent storage.
 
 The GPU can be instructed to wait on a fence using the `dkQueueWaitFence` function. Likewise, a fence can be signaled using `dkQueueSignalFence`. If the `flush` parameter in this function is set to `true` the GPU flushes any dirty cache lines to memory; allowing other observers (such as the CPU) to see the result of writes performed by the GPU up to the point when the fence is signaled. This is important in case e.g. the CPU needs to read the result of GPU work that is performed on a memory block that is set to `DkMemBlockFlags_GpuCached`, such as compute shader writes.
 
@@ -429,9 +429,9 @@ bool dkShaderIsValid(DkShader const* obj);
 DkStage dkShaderGetStage(DkShader const* obj);
 ```
 
-Shaders are programs that run on the GPU and process different stages of the programmable part of the pipeline. In deko3d they are represented by an opaque object called `DkShader`. These objects contain metadata that allow deko3d to set up shader execution on the GPU. deko3d accepts shaders in the DKSH format, which is a container that bundles together the raw shader machine code accepted directly by the GPU together with the aforementioned metadata.
+Shaders are programs that run on the GPU and process different stages of the programmable part of the pipeline. In drako3d they are represented by an opaque object called `DkShader`. These objects contain metadata that allow drako3d to set up shader execution on the GPU. drako3d accepts shaders in the DKSH format, which is a container that bundles together the raw shader machine code accepted directly by the GPU together with the aforementioned metadata.
 
-> **Note**: deko3d **only** accepts native GPU code, i.e. SASS (Streaming Assembler) for Shader Model 5.3; which is the instruction set architecture (ISA) implemented by second-generation Maxwell GPUs. There is absolutely **no way** to use non-native shader languages which require runtime compilation such as GLSL or SPIR-V with deko3d. Users who need to JIT shaders at runtime **must** target the Maxwell 2nd gen ISA (SM53) in some way, shape or form instead of expecting deko3d to accept code written in a foreign language.
+> **Note**: drako3d **only** accepts native GPU code, i.e. SASS (Streaming Assembler) for Shader Model 5.3; which is the instruction set architecture (ISA) implemented by second-generation Maxwell GPUs. There is absolutely **no way** to use non-native shader languages which require runtime compilation such as GLSL or SPIR-V with drako3d. Users who need to JIT shaders at runtime **must** target the Maxwell 2nd gen ISA (SM53) in some way, shape or form instead of expecting drako3d to accept code written in a foreign language.
 
 Field        | Default | Description
 -------------|---------|-------------
@@ -442,20 +442,20 @@ Field        | Default | Description
 
 DKSH shaders can be loaded directly into a code memory block, with `codeMem`/`codeOffset` pointing to the exact place in the code memory block where the shader is loaded. Optionally, the *DKSH control section* can be loaded outside the code memory block - this is explained in the "DKSH format" section further below.
 
-> **Note**: The DKSH format allows for multiple programs (i.e. entrypoints) within a single DKSH shader file, however currently the deko3d shader compiler does not support this feature. Users are advised to leave `programId` at its default value of 0.
+> **Note**: The DKSH format allows for multiple programs (i.e. entrypoints) within a single DKSH shader file, however currently the drako3d shader compiler does not support this feature. Users are advised to leave `programId` at its default value of 0.
 
 `dkShaderIsValid` can be used to check whether a `DkShader` opaque object currently holds a valid shader. `dkShaderGetStage` in addition can be used to retrieve the stage at which the shader executes (such as the vertex or fragment stage).
 
 `DkShader` opaque objects do not claim ownership of any data. They will remain valid as long as the underlying code memory they're referring to is not freed or overwritten by something else.
 
-#### The deko3d shader compiler
+#### The drako3d shader compiler
 
-In the usual deko3d workflow, shaders are developed in a high-level language and compiled to DKSH on the developer's machine by the build system. A PC tool called `uam` has been developed, and it is able to compile GLSL shaders to the native Maxwell ISA and produce DKSH files usable with deko3d.
+In the usual drako3d workflow, shaders are developed in a high-level language and compiled to DKSH on the developer's machine by the build system. A PC tool called `uam` has been developed, and it is able to compile GLSL shaders to the native Maxwell ISA and produce DKSH files usable with drako3d.
 
 ```
 Usage: uam [options] file
 Options:
-  -o, --out=<file>   Specifies the output deko3d shader module file (.dksh)
+  -o, --out=<file>   Specifies the output drako3d shader module file (.dksh)
   -r, --raw=<file>   Specifies the file to which output raw Maxwell bytecode
   -t, --tgsi=<file>  Specifies the file to which output intermediary TGSI code
   -s, --stage=<name> Specifies the pipeline stage of the shader
@@ -465,11 +465,11 @@ Options:
 
 The dialect of GLSL accepted by UAM is essentially the same one that is parsed by mesa/nouveau, with several differences:
 
-- The `DEKO3D` preprocessor symbol is defined, with a value of 100.
-- UBO, SSBO, sampler and image bindings are **required to be explicit** (i.e. `layout (binding = N)`), and they have a one-to-one correspondence with deko3d bindings. Failure to specify explicit bindings will result in an error.
+- The `drako3d` preprocessor symbol is defined, with a value of 100.
+- UBO, SSBO, sampler and image bindings are **required to be explicit** (i.e. `layout (binding = N)`), and they have a one-to-one correspondence with drako3d bindings. Failure to specify explicit bindings will result in an error.
 - There is support for 16 UBOs, 16 SSBOs, 32 "samplers" (combined image+sampler handle), and 8 images for each and every shader stage; with binding IDs ranging from zero to the corresponding limit minus one. However note that due to hardware limitations, only compute stage UBO bindings 0-5 are natively supported, while 6-15 are emulated as "SSBOs".
-- Default uniforms outside UBO blocks are detected, however they are reported as an error due to lack of support in both DKSH and deko3d for retrieving the location of and setting these uniforms.
-- `gl_FragCoord` always uses the Y axis convention specified in the flags during the creation of a deko3d device. `layout (origin_upper_left)` has no effect whatsoever and produces a warning, while `layout (pixel_center_integer)` is not supported at all and produces an error.
+- Default uniforms outside UBO blocks are detected, however they are reported as an error due to lack of support in both DKSH and drako3d for retrieving the location of and setting these uniforms.
+- `gl_FragCoord` always uses the Y axis convention specified in the flags during the creation of a drako3d device. `layout (origin_upper_left)` has no effect whatsoever and produces a warning, while `layout (pixel_center_integer)` is not supported at all and produces an error.
 - Integer divisions and modulo operations with non-constant divisors decay to floating point division, and generate a warning. Well written shaders should avoid these operations for performance and accuracy reasons.
 - 64-bit floating point divisions and square roots can only be approximated with native hardware instructions. This results in loss of accuracy, and as such these operations should be avoided, and they generate a warning as well.
 - Transform feedback is not supported.
@@ -494,7 +494,7 @@ struct DkshHeader
 };
 ```
 
-DKSH files consist of two parts consecutively stored: a *control* section and a *code* section. The size of each section is always a multiple of 256 bytes. The control section contains metadata required by deko3d in order to set up the shader, while the code section contains raw shader code and other information required by hardware itself. deko3d allows the user to load the control section in a separate memory location, and the code section in the actual code memory block. This reduces GPU memory waste, since the GPU has no need whatsoever to read the DKSH control section.
+DKSH files consist of two parts consecutively stored: a *control* section and a *code* section. The size of each section is always a multiple of 256 bytes. The control section contains metadata required by drako3d in order to set up the shader, while the code section contains raw shader code and other information required by hardware itself. drako3d allows the user to load the control section in a separate memory location, and the code section in the actual code memory block. This reduces GPU memory waste, since the GPU has no need whatsoever to read the DKSH control section.
 
 In order to do this users need to parse a tiny bit of the DKSH format. The following algorithm shows how to do it:
 
@@ -507,7 +507,7 @@ In order to do this users need to parse a tiny bit of the DKSH format. The follo
 - Close the DKSH file.
 - Fill in `DkShaderMaker` so that `control` points to the temporary buffer containing the control section, while `codeMem`/`codeOffset` point to the GPU code memory containing the code section.
 - Call `dkShaderInitialize` in order to parse and initialize the shader.
-- Free the temporary buffer since deko3d doesn't need it anymore.
+- Free the temporary buffer since drako3d doesn't need it anymore.
 
 ### Images (`DkImage`)
 
@@ -558,7 +558,7 @@ void dkCmdBufPushData(DkCmdBuf obj, DkGpuAddr addr, const void* data, uint32_t s
 ```
 
 **Recommended reads**:
-- [vkCmdPushConstants](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/vkCmdPushConstants.html) (in Nvidia hardware and in deko3d; *all* uniform buffers have push constant semantics, and their size can be up to 64 KiB)
+- [vkCmdPushConstants](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/vkCmdPushConstants.html) (in Nvidia hardware and in drako3d; *all* uniform buffers have push constant semantics, and their size can be up to 64 KiB)
 
 ### Tiled cache management
 
@@ -589,9 +589,9 @@ uint32_t dkCmdBufEndCaptureCmds(DkCmdBuf obj);
 void dkCmdBufReplayCmds(DkCmdBuf obj, const uint32_t* words, uint32_t num_words);
 ```
 
-Rendering complex scenes usually involves managing independent entities with changing GPU state. Said structs in deko3d are laid out in a format that is concise and easy to modify; however many need to be converted into raw GPU command data every time they're used in dkCmdBufBind\* functions. Depending on the situation, this may entail unnecessary CPU usage/bottlenecking.
+Rendering complex scenes usually involves managing independent entities with changing GPU state. Said structs in drako3d are laid out in a format that is concise and easy to modify; however many need to be converted into raw GPU command data every time they're used in dkCmdBufBind\* functions. Depending on the situation, this may entail unnecessary CPU usage/bottlenecking.
 
-deko3d provides a way to capture raw GPU commands into a user-provided buffer, and replay them with zero computational overhead. When `dkCmdBufBeginCaptureCmds` is called, the command buffer enters *capture mode*. In this mode, commands generated by the different functions are directly written into the user provided storage buffer. Afterwards `dkCmdBufEndCaptureCmds` can be called, and it returns the total number of raw GPU command words that have been captured. These command words can later be replayed in any command buffer using the `dkCmdBufReplayCmds` function. The effect of the replay will be equivalent to calling the original set of dkCmdBuf\* functions used during capture mode.
+drako3d provides a way to capture raw GPU commands into a user-provided buffer, and replay them with zero computational overhead. When `dkCmdBufBeginCaptureCmds` is called, the command buffer enters *capture mode*. In this mode, commands generated by the different functions are directly written into the user provided storage buffer. Afterwards `dkCmdBufEndCaptureCmds` can be called, and it returns the total number of raw GPU command words that have been captured. These command words can later be replayed in any command buffer using the `dkCmdBufReplayCmds` function. The effect of the replay will be equivalent to calling the original set of dkCmdBuf\* functions used during capture mode.
 
 Please note that capture mode has limitations. In particular, running out of storage for the captured commands results in an unavoidable error (`cbAddMem` is ignored), and the following operations are disallowed:
 
@@ -603,7 +603,7 @@ Please note that capture mode has limitations. In particular, running out of sto
   - `dkCmdBufBarrier` with `DkBarrier_Full` mode
   - `dkCmdBufCallList`
 
-> **Warning**: `dkCmdBufReplayCmds` is essentially a backdoor that allows the user to inject arbitrary GPU commands into a command buffer. Please exercise caution and responsibility. Additionally, captured commands might not be compatible if they're replayed using a mismatched version of deko3d.
+> **Warning**: `dkCmdBufReplayCmds` is essentially a backdoor that allows the user to inject arbitrary GPU commands into a command buffer. Please exercise caution and responsibility. Additionally, captured commands might not be compatible if they're replayed using a mismatched version of drako3d.
 
 ## The graphics pipeline
 
@@ -669,7 +669,7 @@ void dkCmdBufSetTessInnerLevels(DkCmdBuf obj, float level0, float level1);
 
 ### Vertex post-processing
 
-- ~~*(Transform feedback)*~~ - not supported in deko3d, use compute shaders instead (feature under consideration but its inclusion in future versions is not guaranteed)
+- ~~*(Transform feedback)*~~ - not supported in drako3d, use compute shaders instead (feature under consideration but its inclusion in future versions is not guaranteed)
 - Viewport routing and mask selection (gl_ViewportIndex and gl_ViewportMask[])
 - Viewport swizzling
 - Clipping and depth clamping
@@ -689,9 +689,9 @@ void dkCmdBufSetViewports(DkCmdBuf obj, uint32_t firstId, DkViewport const viewp
 - [ARB_shader_viewport_layer_array](https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_shader_viewport_layer_array.txt) (gl_ViewportIndex)
 - [NV_viewport_array2](https://www.khronos.org/registry/OpenGL/extensions/NV/NV_viewport_array2.txt) (gl_ViewportMask[], not yet supported in the shader compiler)
 - [NV_viewport_swizzle](https://www.khronos.org/registry/OpenGL/extensions/NV/NV_viewport_swizzle.txt)
-- [gl_ClipDistance](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/gl_ClipDistance.xhtml) (in deko3d all 8 clip distances are enabled; however their default value if they're not written to is 0.0, meaning they have no effect)
+- [gl_ClipDistance](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/gl_ClipDistance.xhtml) (in drako3d all 8 clip distances are enabled; however their default value if they're not written to is 0.0, meaning they have no effect)
 - [ARB_depth_clamp](https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_depth_clamp.txt)
-- [NV_depth_buffer_float](https://www.khronos.org/registry/OpenGL/extensions/NV/NV_depth_buffer_float.txt) (note the section on storing values outside [0,1] which can stem from negative ranges in glDepthRange (i.e. viewport near/far are swapped), which is supported in deko3d)
+- [NV_depth_buffer_float](https://www.khronos.org/registry/OpenGL/extensions/NV/NV_depth_buffer_float.txt) (note the section on storing values outside [0,1] which can stem from negative ranges in glDepthRange (i.e. viewport near/far are swapped), which is supported in drako3d)
 
 ### Rasterization
 

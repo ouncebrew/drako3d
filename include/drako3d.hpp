@@ -1,6 +1,6 @@
 /*
 **-----------------------------------------------------------------------------
-** deko3d.hpp - C++ wrapper interface for deko3d
+** drako3d.hpp - C++ wrapper interface for drako3d
 **-----------------------------------------------------------------------------
 **
 ** Copyright (C) 2018-2020 fincs
@@ -33,7 +33,7 @@
 #ifdef DK_HPP_SUPPORT_VECTOR
 #include <vector>
 #endif
-#include "deko3d.h"
+#include "drako3d.h"
 
 namespace dk
 {

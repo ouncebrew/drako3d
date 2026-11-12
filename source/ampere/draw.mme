@@ -109,7 +109,7 @@ DrawIndexed::
 	}
 	BEQ $r5 $zero .drawLoop # Skip constbuf update if vertex offset and first instance are both zero
 
-	# Update gl_BaseVertex and gl_BaseInstance in the deko3d driver constbuf
+	# Update gl_BaseVertex and gl_BaseInstance in the drako3d driver constbuf
 	# It is assumed that the caller of this macro used SelectDriverConstbuf
 	# previously (unless said parameters are a constant zero)
 	{

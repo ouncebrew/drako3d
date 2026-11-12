@@ -6,12 +6,12 @@ ifeq ($(strip $(DEVKITPRO)),)
 $(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>/devkitpro")
 endif
 
-export DEKO3D_MAJOR	:= 0
-export DEKO3D_MINOR	:= 5
-export DEKO3D_PATCH	:= 0
+export DRAKO3D_MAJOR	:= 0
+export DRAKO3D_MINOR	:= 5
+export DRAKO3D_PATCH	:= 0
 
 
-VERSION	:=	$(DEKO3D_MAJOR).$(DEKO3D_MINOR).$(DEKO3D_PATCH)
+VERSION	:=	$(DRAKO3D_MAJOR).$(DRAKO3D_MINOR).$(DRAKO3D_PATCH)
 
 #---------------------------------------------------------------------------------
 # GPU_ARCH selects the target GPU (ampere [GA10F, Switch 2] or maxwell [GM20B, Switch 1])
@@ -132,19 +132,19 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 .PHONY: clean all
 
 #---------------------------------------------------------------------------------
-all: lib/libdeko3d.a lib/libdeko3dd.a
+all: lib/libdrako3d.a lib/libdrako3dd.a
 
 dist-bin: all
-	@tar --exclude=*~ -cjf deko3d-$(VERSION).tar.bz2 include lib
+	@tar --exclude=*~ -cjf drako3d-$(VERSION).tar.bz2 include lib
 
 dist-src:
-	@tar --exclude=*~ -cjf deko3d-src-$(VERSION).tar.bz2 include source Makefile
+	@tar --exclude=*~ -cjf drako3d-src-$(VERSION).tar.bz2 include source Makefile
 
 dist: dist-src dist-bin
 
 install: dist-bin
 	mkdir -p $(DESTDIR)$(LIBNX)
-	bzip2 -cd deko3d-$(VERSION).tar.bz2 | tar -xf - -C $(DESTDIR)$(LIBNX)
+	bzip2 -cd drako3d-$(VERSION).tar.bz2 | tar -xf - -C $(DESTDIR)$(LIBNX)
 
 lib:
 	@[ -d $@ ] || mkdir -p $@
@@ -155,14 +155,14 @@ release:
 debug:
 	@[ -d $@ ] || mkdir -p $@
 
-lib/libdeko3d.a : lib release $(SOURCES) $(INCLUDES)
+lib/libdrako3d.a : lib release $(SOURCES) $(INCLUDES)
 	@$(MAKE) BUILD=release OUTPUT=$(CURDIR)/$@ \
 	BUILD_CFLAGS="-DNDEBUG=1 -O2 $(EXTRAOPT)" \
 	DEPSDIR=$(CURDIR)/release \
 	--no-print-directory -C release \
 	-f $(CURDIR)/Makefile
 
-lib/libdeko3dd.a : lib debug $(SOURCES) $(INCLUDES)
+lib/libdrako3dd.a : lib debug $(SOURCES) $(INCLUDES)
 	@$(MAKE) BUILD=debug OUTPUT=$(CURDIR)/$@ \
 	BUILD_CFLAGS="-DDEBUG=1 -O2" \
 	DEPSDIR=$(CURDIR)/debug \
@@ -188,15 +188,15 @@ $(OFILES_SRC)	: $(HFILES)
 
 mme_macros.h : engine_3d.mme $(MMEFILES)
 	@echo $(notdir $@)
-	@dekomme $(MMEFLAGS) -o $@ $^
+	@drakomme $(MMEFLAGS) -o $@ $^
 
 %_3d.h %_3d.mme : %_3d.def
 	@echo $(notdir $<)
-	@dekodef -h $*_3d.h -m $*_3d.mme $<
+	@drakodef -h $*_3d.h -m $*_3d.mme $<
 
 %.h : %.def
 	@echo $(notdir $<)
-	@dekodef -h $@ $<
+	@drakodef -h $@ $<
 
 method_names.h : $(DEFFILES) method_names_gen.py
 	@echo $(notdir $@)
