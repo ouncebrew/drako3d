@@ -1,90 +1,84 @@
 # drako3d
 
-drako3d is a brand new homebrew low level 3D graphics API targetting the Nvidia Tegra T239 processor found inside the Nintendo Switch 2. It is based on [deko3d](https://github.com/devkitPro/deko3d). Drako3d provides the following features:
+drako3d is a (semi-)brand new homebrew low level 3D graphics API targetting the Nvidia Tegra T239 processor found inside the Nintendo Switch 2. It is based on [deko3d](https://github.com/devkitPro/deko3d). drako3d provides the following features:
 
-- Low level and explicit API reminiscent of Vulkan®: deko3d is modeled after popular low level concepts such as devices, queues, command buffers, and much more. deko3d thus provides a window into the inner workings of the GPU.
-- Low overhead and explicit resource management: deko3d lets developers take control of resource management, and make decisions that make most sense in each case. In addition, care was taken to avoid unnecessary dynamic memory allocations and other undesired behavior that can result in degraded application performance.
-- Control over command generation: deko3d grants developers the ability to manage and record command lists that can be submitted to the GPU, as well as the ability to maintain multiple parallel queues of command processing, each with its own internal (GPU-managed) state.
-- Ease of use and convenience: despite being a low level API, care was taken to avoid introducing arbitrary restrictions in the API (such as giant immutable state objects or overengineered abstractions) that do not correspond to how the hardware works. deko3d aims to expose every useful thing that the GPU can do, in the most straightforward way possible. Between pedanticness and programmer happiness, the latter was selected.
-- Compile-time resource management: deko3d provides and promotes a workflow involving the compilation and conversion of assets such as shaders or graphics at compile time, therefore avoiding runtime resource waste.
+- Low level and explicit API reminiscent of Vulkan®: drako3d is modeled after popular low level concepts such as devices, queues, command buffers, and much more.
+- Low overhead and explicit resource management: drako3d lets developers take control of resource management, and make decisions that make most sense in each case. In addition, care was taken to avoid unnecessary dynamic memory allocations and other undesired behavior that can result in degraded application performance.
+- Control over command generation: drako3d grants developers the ability to manage and record command lists that can be submitted to the GPU, as well as the ability to maintain multiple parallel queues of command processing, each with its own internal (GPU-managed) state.
+- Ease of use and convenience: despite being a low level API, care was taken to avoid introducing arbitrary restrictions in the API (such as giant immutable state objects or overengineered abstractions) that do not correspond to how the hardware works. drako3d aims to expose every useful thing that the GPU can do, in the most straightforward way possible. Between pedanticness and programmer happiness, the latter was selected.
+- Compile-time resource management: drako3d provides and promotes a workflow involving the compilation and conversion of assets such as shaders or graphics at compile time, therefore avoiding runtime resource waste.
 - Debug version of the library, providing parameter and state checking, as well as warning/error messages. The release version of the library omits validation checks and is compiled with extra optimization flags for maximum speed.
 - Ability to use a plain C version of the API, as well as a rich C++ wrapper inspired by Vulkan-Hpp.
 
-In conclusion, deko3d is the homebrew answer to Nintendo and Nvidia's proprietary NVN graphics API. deko3d is the culmination of a year-and-a-half long (and still ongoing!) reverse engineering effort centered around NVN, which has in turn heavily influenced its design and implementation. The source code of deko3d is intended to also serve a double purpose as a public example of how to use an Nvidia GPU, as well as aiming to be an accurate-as-possible public repository of register definitions and other hardware information.
+In conclusion, drako3d is the homebrew answer to Nintendo and Nvidia's proprietary NVN2 graphics API. The source code of drako3d is intended to also serve as a public example of how to use an Nvidia GPU, as well as aiming to be an accurate-as-possible public repository of register definitions and other hardware information.
 
-## Installation
+## Current status
 
-Users don't need to do anything special on their own to install deko3d, as this is a core homebrew library in the `switch-dev` group supplied through [devkitPro pacman](https://devkitpro.org/wiki/devkitPro_pacman). However, users who haven't received deko3d because they set up their toolchain installation prior to its release may want to run these commands:
+drako3d is currently wip, but it should support everything deko3d does on Switch 1. The public API (`deko3d.h` / `deko3d.hpp`, `Dk*` / `dk::` names) is unchanged from deko3d, and the library can still be built for the original Switch (GM20B) with `GPU_ARCH=maxwell`, however, this is a first and foremost Switch 2 project. If you are exclusively targeting Switch 1 then you should really just use deko3d.
 
-	(sudo) (dkp-)pacman -Syu
-	(sudo) (dkp-)pacman -S --noconfirm --needed switch-dev
+### Working
 
-Nonetheless for documentation's sake it is pointed out that building deko3d from source requires building and installing [dekotools](https://github.com/fincs/dekotools). No support nor precompiled binaries are provided for these tools though, since users are expected and encouraged to use the prebuilt binaries on devkitPro's pacman repository. Developers wishing to contribute to deko3d are kindly invited to talk to us at devkitPro first, through the usual hacking channels :)
+- Devices, memory blocks, queues, device info
+- Command buffers, fences, cross-queue waits, `waitIdle`, command list capture/replay, `callList`, `pushData`
+- RGBA8, BGRA8, RGBX8 and RGB10A2 formats, crop rectangles, swap intervals, recreating a swapchain, GPU-side acquire/present synchronization, external fences
+- 3D draws, indexed/instanced/indirect draws, vertex buffers and attributes, uniform buffers and push constants, storage buffers, textures and samplers, image load/store/atomics, shader scratch memory
+- Tessellation and geometry shaders
+- Depth/stencil, depth bounds, blending, multiple render targets, clears
+- Culling, polygon modes, line/point size, line and polygon stipple, provoking vertex, scissors, viewports and swizzles, depth clamp and bias
+- MSAA (2x/4x/8x), sample masks and locations, alpha to coverage, coverage modulation, resolves
+- Compute dispatches
+- Transfers
+- Report counters
+- Zcull
+- Colour/depth compression
+- GPU error reporting
+
+### Known limitations
+
+- There's no shader compiler yet. S2 shaders currently have to be hand-assembled. This is being worked on.
+
+## Building
+
+Building drako3d requires devkitPro, [drakotools](https://github.com/ouncebrew/drakotools) (`dekodef` and `dekomme`) on your `PATH`, and either libounce (Switch 2) or libnx (Switch 1).
+
+	make                    # Switch 2 (GA10F)
+	make GPU_ARCH=maxwell   # Switch 1 (GM20B)
+	make install
+
+Run `make clean` when switching `GPU_ARCH`.
 
 ## Preemptively Answered Questions (PAQ)
 
 ### Can I use the shader compiler inside my program?
 
-The short answer is no: deko3d's shader compiler (UAM) is a PC tool that runs at compile time as opposed to at runtime, and this is a *main design goal* of deko3d.
+The short answer is no (at least not yet): drako3d's shader compiler (UAM2) is a PC tool that runs at compile time as opposed to at runtime, and this is a *main design goal* of drako3d.
 
-The long answer is: in order to provide a lightweight API that doesn't make compromises, certain hindersome aspects of typical cross-platform graphics APIs such as forceful runtime compilation of shaders were left out. This doesn't mean that it is *impossible* to dynamically generate shaders; it only means that deko3d only provides the means to use native code. Users could target the native shader instruction set in their JIT engines; or even write a new shader compiler from scratch that can be made to run on the Switch. (If anyone is willing to make that happen, please talk to us as we would be *very* interested in it!)
+However, it is more than likely once more has been finalised with UAM2, that some sort of runtime compiler emerges from it. Despite this, if possible, you really should pre-compile shaders when using drako3d.
 
-### Is this a clone of NVN?
+### Is this a clone of NVN2?
 
-deko3d is not a clone of NVN. However, deko3d was developed as a result of NVN reverse engineering work, and as such it borrows many implementation ideas. Essentially, deko3d was designed to fulfill the same place in homebrew that NVN does in official software.
+drako3d is not a clone of NVN2 just as deko3d wasn't a clone of NVN. However, drako3d was developed as a result of NVN2 reverse engineering work, and as such it borrows many implementation ideas. Essentially, deko3d was designed to fulfill the same place in homebrew that NVN does in official software.
 
-### Why make yet another API instead of reimplementing NVN?
+### Why and when should I use drako3d instead of kaiHEN's OpenGL/Vulkan drivers?
 
-For the same reason that libnx is not a carbon copy of the official SDK. deko3d is intended to be an independent homebrew thing, and it is designed specifically to cater to homebrew needs, workflows and standards.
+drako3d is a lightweight low level API; several orders of magnitude more lightweight than any Mesa port. A typical application using Mesa will usually be several megabytes in size (around 20MB or larger); while a typical application using drako3d will clock at around 500 KB or even smaller. The reason for this stems from the fact that mesa is designed in an environment where code size is not an issue, and shared libraries are used to load graphics drivers, which is the opposite situation that exists on Switch. drako3d also is optimised directly for the GPU in the Switch 2 (GA10F)
 
-### Why isn't this a Vulkan driver?
+On the other hand, Mesa provides a standard OpenGL/Vulkan API, while drako3d is a Switch(2) homebrew-specific API. Users would be advised to stick to Mesa (or libraries using it such as SDL) if a standard API is desired for cross-platform support.
 
-The Vulkan API is designed in a way that adds artificial restrictions and imposes workflows that do not correspond to how Nvidia hardware works; and many Nvidia hardware features aren't exposed in an optimal way (if at all). deko3d on the other hand tries to be as honest as possible with the reality of Nvidia hardware. What's more, cross platform APIs are designed in a way that does not play nice in certain resource constrained scenarios (such as reimplementing parts of the Switch's operating system), where there is essentially no room for any kind of waste.
+### Is drako3d faster than OpenGL/Vulkan?
 
-Additionally, Nvidia GPUs are poorly understood pieces of hardware due to the vendor's refusal to publish hardware documentation, specifically 3D class methods and the shader ISA. For this reason, reverse engineering NVN and implementing a homebrew counterpart (deko3d) is a precondition for doing anything that requires a better understanding of the hardware (and this also includes writing a Vulkan driver). This process has shed a considerable amount of light on this topic, and there's even the chance of a homebrew Vulkan driver (running on top of deko3d) being developed in the future.
+As mentioned previously, drako3d has native support for several Turing/Ampere/Ada performance-enhancing features that nvk currently hasn't been updated to use. These features were figured out by reverse engineering NVN2, and the results of that work are present in drako3d. In addition, there is substantially lower CPU overhead compared to OpenGL/Vulkan, since drako3d is a low-level graphics API. The same reasons that would prompt users to switch to Vulkan over OpenGL for the purposes of reducing CPU/GPU overhead apply to drako3d as well.
 
-### Why and when should I use deko3d instead of switch-mesa's OpenGL driver?
+### Why do you call NVN NVN2?
 
-deko3d is a lightweight low level API; several orders of magnitude more lightweight than switch-mesa. A typical application using switch-mesa will usually be several megabytes in size (around 8 MB or larger); while a typical application using deko3d will clock at around 500 KB or even smaller. The reason for this stems from the fact that mesa is designed in an environment where code size is not an issue, and shared libraries are used to load graphics drivers, which is the opposite situation that exists on Switch. Also, deko3d has native support for many Kepler/Maxwell performance-enhancing hardware features that nouveau currently doesn't have such as Zcull, the tiled cache, compressed render targets (decompressed prior to presentation), several optimizations in the shader compiler, and more.
-
-On the other hand, switch-mesa provides a standard OpenGL API, while deko3d is a Switch homebrew specific API. Users would be advised to stick to switch-mesa (or libraries using it such as SDL) if a standard API is desired for cross-platform support. Alternatively users may want to implement a separate deko3d backend for their applications, however this also increases the amount of maintenance work.
-
-### Is deko3d faster than OpenGL?
-
-As mentioned previously, deko3d has native support for several Kepler/Maxwell performance-enhancing features that nouveau currently hasn't been updated to use. These features were figured out by reverse engineering NVN, and the results of that work are present in deko3d. In addition, there is substantially lower CPU overhead compared to OpenGL, since deko3d is a low-level graphics API. The same reasons that would prompt users to switch to Vulkan for the purposes of reducing CPU/GPU overhead apply to deko3d as well.
-
-### Why does this project exist instead of contributing to nouveau, such as by improving the existing code or writing a Vulkan driver?
-
-The way mesa and nouveau are designed and developed makes it difficult to add support for certain missing hardware features, and carries a risk of introducing unforeseen regressions in other parts of the system. Adding and testing support for newer stuff has quickly become an uphill battle too, especially due to the reclocking issue which renders nouveau virtually unusable on anything newer than Kepler. Additionally, Vulkan for nouveau is essentially a major undertaking that requires major architectural changes. As an example, nouveau's Linux kernel interface wasn't designed with low level APIs in mind, which would need a substantial redesign of the way nouveau talks to the underlying OS.
-
-The NVN reverse engineering route has resulted in much cleaner, straightforward, and fruitful results - the homebrew community has received a more suitable and lightweight low level API, and without needing to depend on nouveau's uncertain future. In fact, at the time of writing, it is unfortunately not clear if nouveau will ever receive Vulkan support.
-
-With that said, deko3d (like mesa/nouveau) is released under permissive licensing terms. All developers are free to study and use it as reference material, including nouveau developers; in fact they are very much welcome to do so. Specifically, there are certain improvements in the shader compiler (which *is* based off mesa/nouveau sources) which we would be more than happy to upstream; as well as assisting with anything else we might be asked about.
+Mostly just to differentiate which iteration of NVN that I'm referring to. Internally, Nintendo calls them both NVN, yet they operate differently depending on the console run (Switch 1 or Switch 2).
 
 ## Future plans
 
-In its current form, deko3d provides support for around 80% of most common hardware features. However, deko3d is still a work in progress, and the following items are still waiting to be implemented (in no particular order):
+- A Switch 2 shader compiler
+- FP16/HDR swapchains (requires libounce to support them too)
 
-- A texture conversion tool
-- Event synchronization primitives
-- Conditional render
-- Conservative raster
-- Zcull state save/restore
-- Calling command lists from other command lists
-- Add support for X/Y flip and the 2D engine to dkCmdBufCopyImage
-- Registering custom zero-bandwidth-clear color/depth values
-- Transform feedback
-- Multidraw
-- Variable group size in compute shaders
-- NV_draw_texture equivalent functionality
-- Passthrough geometry shaders
-- `gl_ViewportMask[]` (also known as NV_viewport_array2)
-- Reading sample positions in shaders (directly or indirectly)
-- Fragment shader interlock
-- Sparse textures
-- "Color reduction" (?)
-- "Stencil cull criteria" (?)
-- An unidentified special Zcull mode
+Most of deko3d's open items still apply as well.
 
 ## Credits and acknowledgements
 
