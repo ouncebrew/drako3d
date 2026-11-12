@@ -4,6 +4,8 @@
 #define NVDEV_IOC(dir, size, type, nr) \
 	(((u32)(dir) << 30) | ((u32)(size) << 16) | ((u32)(type) << 8) | (u32)(nr))
 
+#define NVDEV_GP_ZCULL_GET_CTX_SIZE  NVDEV_IOC(2, 0x04, 0x47, 0x01)
+#define NVDEV_GP_ZCULL_GET_INFO      NVDEV_IOC(2, 0x28, 0x47, 0x02)
 #define NVDEV_GP_GET_CHARACTERISTICS NVDEV_IOC(3, 0xE8, 0x47, 0x05)
 #define NVDEV_GP_GET_TPC_MASKS       NVDEV_IOC(3, 0x18, 0x47, 0x06)
 #define NVDEV_GP_SET_CLIENT_HANDLE   NVDEV_IOC(1, 0x08, 0x47, 0x14)
@@ -18,6 +20,7 @@
 
 #define NVDEV_CH_SET_TIMEOUT         NVDEV_IOC(1, 0x04, 0x48, 0x03)
 #define NVDEV_CH_ALLOC_OBJ_CTX       NVDEV_IOC(3, 0x10, 0x48, 0x09)
+#define NVDEV_CH_ZCULL_BIND          NVDEV_IOC(3, 0x10, 0x48, 0x0B)
 #define NVDEV_CH_SET_ERROR_NOTIFIER  NVDEV_IOC(3, 0x18, 0x48, 0x0C)
 #define NVDEV_CH_GET_ERROR_INFO      NVDEV_IOC(2, 0x80, 0x48, 0x16)
 #define NVDEV_CH_GET_ERROR_NOTIF     NVDEV_IOC(3, 0x10, 0x48, 0x17)
@@ -47,6 +50,8 @@ u32 ctrlGpuFd() noexcept;
 u32 asFd() noexcept;
 u64 const* characteristics() noexcept;
 u32 graphicsEngineId() noexcept;
+u32 zcullCtxSize() noexcept;
+nvioctl_zcull_info const* zcullInfo() noexcept;
 GsvSync* sync() noexcept;
 
 bool allocVa(u64 size, u64 align, DkGpuAddr& out) noexcept;

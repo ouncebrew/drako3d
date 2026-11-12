@@ -175,6 +175,8 @@ namespace
 		DkGpuAddr syncRoBase;
 		u32 syncRoStride;
 		u32 syncRoCount;
+		u32 zcullCtxSize;
+		nvioctl_zcull_info zcullInfo;
 
 		Mutex vaMutex;
 		u32 numHeaps;
@@ -341,6 +343,17 @@ namespace
 		g_nv.syncRoCount = map.count;
 	}
 
+	void queryZcull()
+	{
+		u32 ctxSize = 0;
+		if (R_FAILED(nvIoctl(g_nv.ctrlGpuFd, NVDEV_GP_ZCULL_GET_CTX_SIZE, &ctxSize))
+			|| R_FAILED(nvIoctl(g_nv.ctrlGpuFd, NVDEV_GP_ZCULL_GET_INFO, &g_nv.zcullInfo)))
+			ctxSize = 0;
+		if (!ctxSize)
+			g_nv.zcullInfo = s_defaultZcullInfo;
+		g_nv.zcullCtxSize = ctxSize;
+	}
+
 	Result traceStep(const char* step, Result rc)
 	{
 #ifdef DEBUG
@@ -412,6 +425,8 @@ namespace
 			res = traceStep("queryCharacteristics", queryCharacteristics());
 		if (R_SUCCEEDED(res))
 			res = traceStep("queryEngines", queryEngines());
+		if (R_SUCCEEDED(res))
+			queryZcull();
 
 		if (R_SUCCEEDED(res))
 			res = traceStep("nvOpen(as-gpu)", nvOpen(&g_nv.asFd, "/dev/nvhost-as-gpu"));
@@ -455,6 +470,8 @@ u32 dk::detail::nvdev::ctrlGpuFd() noexcept { return g_nv.ctrlGpuFd; }
 u32 dk::detail::nvdev::asFd() noexcept { return g_nv.asFd; }
 u64 const* dk::detail::nvdev::characteristics() noexcept { return g_nv.charsBlock; }
 u32 dk::detail::nvdev::graphicsEngineId() noexcept { return g_nv.engineId; }
+u32 dk::detail::nvdev::zcullCtxSize() noexcept { return g_nv.zcullCtxSize; }
+nvioctl_zcull_info const* dk::detail::nvdev::zcullInfo() noexcept { return &g_nv.zcullInfo; }
 GsvSync* dk::detail::nvdev::sync() noexcept { return &g_nv.sync; }
 
 bool dk::detail::nvdev::allocVa(u64 size, u64 align, DkGpuAddr& out) noexcept
@@ -674,10 +691,9 @@ DkResult Device::initialize()
 	if (m_gpuInfo.numSms < 12)
 		m_gpuInfo.numSms = 12;
 
-	// TODO(S2): zcull
-	m_gpuInfo.zcullCtxSize = 0;
+	m_gpuInfo.zcullCtxSize = nvdev::zcullCtxSize();
 	m_gpuInfo.zcullCtxAlign = 0x1000; // Hardcoded, as per official software
-	m_gpuInfo.zcullInfo = &s_defaultZcullInfo;
+	m_gpuInfo.zcullInfo = nvdev::zcullInfo();
 
 	// The GPU virtual address space is shared by all devices
 	m_addrSpace.fd = nvdev::asFd();

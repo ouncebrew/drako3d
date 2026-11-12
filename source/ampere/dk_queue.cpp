@@ -230,6 +230,13 @@ DkResult Queue::initialize()
 	printf("Work buf: 0x%010lx\n", m_workBuf.getGpuAddrPitch());
 #endif
 
+	if (m_workBuf.getZcullCtxSize())
+	{
+		struct { u64 gpu_va; u32 mode; u32 reserved; } bind = { m_workBuf.getZcullCtx(), 2, 0 };
+		if (R_FAILED(nvIoctl(m_gpuChannel.base.fd, NVDEV_CH_ZCULL_BIND, &bind)))
+			return DkResult_Fail;
+	}
+
 	setupEngines();
 	setupTransfer();
 	if (hasGraphics())
