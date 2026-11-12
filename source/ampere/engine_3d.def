@@ -649,6 +649,7 @@ engine _3D 0xC797;
 0x670 Unknown670;
 0x671 ColorLogicOpEnable bool;
 0x672 ColorLogicOpType; // uses GL_* enum values (yes seriously)
+0x673 ZCompressionEnable bool;
 
 0x674 ClearBuffers bits (
 	0      Depth bool;
@@ -660,6 +661,8 @@ engine _3D 0xC797;
 	6..9   TargetId;
 	10..20 LayerId;
 );
+
+0x678 ColorCompressionEnable array[8] bool;
 
 0x680 ColorWriteMask array[8] bits (
 	0  Red bool;

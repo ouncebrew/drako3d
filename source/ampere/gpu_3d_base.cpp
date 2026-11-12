@@ -87,6 +87,8 @@ void Queue::setup3DEngine()
 	w << MacroFillArray<E::IsVertexArrayPerInstance>(0);
 	w << CmdInline(3D, VertexIdConfig{}, E::VertexIdConfig::DrawArraysAddStart{});
 	w << CmdInline(3D, ZcullStatCountersEnable{}, 1);
+	w << CmdInline(3D, ZCompressionEnable{}, 1);
+	w << MacroFillArray<E::ColorCompressionEnable>(1);
 	w << CmdInline(3D, LineWidthSeparate{}, 1);
 	w << CmdInline(3D, Unknown0c3{}, 0);
 	w << CmdInline(3D, Unknown0c0{}, 3);

@@ -12,6 +12,12 @@ namespace
 	constexpr u8 s_pteKindZF32X24S8 = 0x04;
 	constexpr u8 s_pteKindZ24S8 = 0x05;
 	constexpr u8 s_pteKindGeneric = 0x06;
+	constexpr u8 s_pteKindGenericCompressible = 0x08;
+	constexpr u8 s_pteKindS8Compressible = 0x0A;
+	constexpr u8 s_pteKindZ16Compressible = 0x0B;
+	constexpr u8 s_pteKindS8Z24Compressible = 0x0C;
+	constexpr u8 s_pteKindZF32X24S8Compressible = 0x0D;
+	constexpr u8 s_pteKindZ24S8Compressible = 0x0E;
 
 	// Turing+ page kinds have no compression variants per sample count
 	u8 pickPteKind(NvKind kind)
@@ -19,6 +25,7 @@ namespace
 		switch (kind)
 		{
 			case NvKind_Z16:
+				return s_pteKindZ16;
 			case NvKind_Z16_2C:
 			case NvKind_Z16_2Z:
 			case NvKind_Z16_MS2_2C:
@@ -27,30 +34,65 @@ namespace
 			case NvKind_Z16_MS4_2Z:
 			case NvKind_Z16_MS8_2C:
 			case NvKind_Z16_MS8_2Z:
-				return s_pteKindZ16;
+				return s_pteKindZ16Compressible;
 			case NvKind_S8:
-			case NvKind_S8_2S:
 				return s_pteKindS8;
+			case NvKind_S8_2S:
+				return s_pteKindS8Compressible;
 			case NvKind_S8Z24:
+				return s_pteKindS8Z24;
 			case NvKind_S8Z24_2CZ:
 			case NvKind_S8Z24_MS2_2CZ:
 			case NvKind_S8Z24_MS4_2CZ:
 			case NvKind_S8Z24_MS8_2CZ:
-				return s_pteKindS8Z24;
+				return s_pteKindS8Z24Compressible;
 			case NvKind_Z24S8:
+				return s_pteKindZ24S8;
 			case NvKind_Z24S8_2CZ:
 			case NvKind_Z24S8_MS2_2CZ:
 			case NvKind_Z24S8_MS4_2CZ:
 			case NvKind_Z24S8_MS8_2CZ:
-				return s_pteKindZ24S8;
+				return s_pteKindZ24S8Compressible;
 			case NvKind_ZF32_X24S8:
+				return s_pteKindZF32X24S8;
 			case NvKind_ZF32_X24S8_2CSZV:
 			case NvKind_ZF32_X24S8_MS2_2CSZV:
 			case NvKind_ZF32_X24S8_MS4_2CSZV:
 			case NvKind_ZF32_X24S8_MS8_2CSZV:
-				return s_pteKindZF32X24S8;
+				return s_pteKindZF32X24S8Compressible;
+			case NvKind_ZF32_2CZ:
+			case NvKind_ZF32_MS2_2CZ:
+			case NvKind_ZF32_MS4_2CZ:
+			case NvKind_ZF32_MS8_2CZ:
+			case NvKind_C32_2CRA:
+			case NvKind_C32_MS2_2CRA:
+			case NvKind_C32_MS4_2CBR:
+			case NvKind_C32_MS8_MS16_2CRA:
+			case NvKind_C64_2CRA:
+			case NvKind_C64_MS2_2CRA:
+			case NvKind_C64_MS4_2CBR:
+			case NvKind_C64_MS8_MS16_2CRA:
+			case NvKind_C128_2CR:
+			case NvKind_C128_MS2_2CR:
+			case NvKind_C128_MS4_2CR:
+			case NvKind_C128_MS8_MS16_2CR:
+				return s_pteKindGenericCompressible;
 			default:
 				return s_pteKindGeneric;
+		}
+	}
+
+	u8 uncompressedPteKind(u8 kind)
+	{
+		switch (kind)
+		{
+			case s_pteKindGenericCompressible:   return s_pteKindGeneric;
+			case s_pteKindS8Compressible:        return s_pteKindS8;
+			case s_pteKindZ16Compressible:       return s_pteKindZ16;
+			case s_pteKindS8Z24Compressible:     return s_pteKindS8Z24;
+			case s_pteKindZF32X24S8Compressible: return s_pteKindZF32X24S8;
+			case s_pteKindZ24S8Compressible:     return s_pteKindZ24S8;
+			default:                             return kind;
 		}
 	}
 
@@ -173,7 +215,6 @@ DkResult MemBlock::initialize(uint32_t flags, void* storage, uint32_t size)
 		if (isCode())
 			m_codeSegOffset = getDevice()->getCodeSeg().calcOffset(va);
 
-		// TODO(S2): compressible kinds are never used
 		if (flags & DkMemBlockFlags_Image)
 			m_gpuAddrGeneric = va;
 	}
@@ -238,7 +279,21 @@ DkGpuAddr MemBlock::getGpuAddrForImage(uint32_t offset, uint32_t size, NvKind ki
 	}
 
 	u8 appliedKind;
-	if (R_FAILED(nvdev::changeKind(m_gpuAddrCompressed + offset, size, pteKind, appliedKind)))
+	Result rc = nvdev::changeKind(m_gpuAddrCompressed + offset, size, pteKind, appliedKind);
+	u8 fallbackKind = uncompressedPteKind(pteKind);
+	if (fallbackKind != pteKind && (R_FAILED(rc) || appliedKind != pteKind))
+	{
+#ifdef DEBUG
+		if (R_FAILED(rc))
+			DK_WARNING("compressible page kind 0x%02x rejected (0x%x), using 0x%02x", pteKind, rc, fallbackKind);
+		else
+			DK_WARNING("compressible page kind 0x%02x became 0x%02x, using 0x%02x", pteKind, appliedKind, fallbackKind);
+#endif
+		pteKind = fallbackKind;
+		rc = nvdev::changeKind(m_gpuAddrCompressed + offset, size, pteKind, appliedKind);
+	}
+
+	if (R_FAILED(rc))
 		DK_ERROR(DkResult_Fail, "failed to remap memory block for image usage");
 #ifdef DEBUG
 	else if (appliedKind != pteKind)
