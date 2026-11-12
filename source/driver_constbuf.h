@@ -32,9 +32,9 @@ namespace dk::detail
 
 	struct GraphicsDriverCbuf
 	{
-		// TODO(S2): storage buffer placement is provisional
+		uint32_t _unknown[4];
 		BufDescriptor storageBufs[1+DkStage_MaxGraphics][DK_NUM_STORAGE_BUFS];
-		uint32_t _unknown[0x10];
+		uint32_t _unknown2[0xC];
 		uint32_t baseVertex;
 		uint32_t baseInstance;
 		uint32_t drawId;
@@ -42,6 +42,7 @@ namespace dk::detail
 		GraphicsHandleCbuf handles[DkStage_MaxGraphics];
 	};
 
+	static_assert(offsetof(GraphicsDriverCbuf, storageBufs) == 0x10, "Bad S2 driver constbuf layout");
 	static_assert(offsetof(GraphicsDriverCbuf, baseVertex) == 0x640, "Bad S2 driver constbuf layout");
 	static_assert(offsetof(GraphicsDriverCbuf, baseInstance) == 0x644, "Bad S2 driver constbuf layout");
 	static_assert(offsetof(GraphicsDriverCbuf, drawId) == 0x648, "Bad S2 driver constbuf layout");
