@@ -172,6 +172,7 @@ namespace
 		u64 chars[0xE8/8];
 		u64 charsBlock[0xD8/8];
 		u32 engineId;
+		u32 tpcMask;
 		DkGpuAddr syncRoBase;
 		u32 syncRoStride;
 		u32 syncRoCount;
@@ -354,6 +355,15 @@ namespace
 		g_nv.zcullCtxSize = ctxSize;
 	}
 
+	void queryTpcMask()
+	{
+		u64 req[3] = { sizeof(u32), 0, 0 };
+		u32 mask = 0;
+		if (R_FAILED(nvIoctl3(g_nv.ctrlGpuFd, NVDEV_GP_GET_TPC_MASKS, req, &mask, sizeof(mask))))
+			mask = 0;
+		g_nv.tpcMask = mask;
+	}
+
 	Result traceStep(const char* step, Result rc)
 	{
 #ifdef DEBUG
@@ -427,6 +437,8 @@ namespace
 			res = traceStep("queryEngines", queryEngines());
 		if (R_SUCCEEDED(res))
 			queryZcull();
+		if (R_SUCCEEDED(res))
+			queryTpcMask();
 
 		if (R_SUCCEEDED(res))
 			res = traceStep("nvOpen(as-gpu)", nvOpen(&g_nv.asFd, "/dev/nvhost-as-gpu"));
@@ -470,6 +482,7 @@ u32 dk::detail::nvdev::ctrlGpuFd() noexcept { return g_nv.ctrlGpuFd; }
 u32 dk::detail::nvdev::asFd() noexcept { return g_nv.asFd; }
 u64 const* dk::detail::nvdev::characteristics() noexcept { return g_nv.charsBlock; }
 u32 dk::detail::nvdev::graphicsEngineId() noexcept { return g_nv.engineId; }
+u32 dk::detail::nvdev::tpcMask() noexcept { return g_nv.tpcMask; }
 u32 dk::detail::nvdev::zcullCtxSize() noexcept { return g_nv.zcullCtxSize; }
 nvioctl_zcull_info const* dk::detail::nvdev::zcullInfo() noexcept { return &g_nv.zcullInfo; }
 GsvSync* dk::detail::nvdev::sync() noexcept { return &g_nv.sync; }
@@ -680,15 +693,11 @@ DkResult Device::initialize()
 		return DkResult_Fail;
 	m_didLibInit = true;
 
-	// TODO(S2): no warp count field is decoded yet. GA10x SMs hold 48 warps, so 64 is
-	// used so that scratch memory is never undersized.
-	m_gpuInfo.numWarpsPerSm = 64;
+	m_gpuInfo.numWarpsPerSm = 48;
 
-	// TODO(S2): TPC count taken as popcount of the TPC mask at +0x28 with two SMs per
-	// TPC.
-	u32 const* chars = reinterpret_cast<u32 const*>(nvdev::characteristics());
-	m_gpuInfo.numSms = __builtin_popcount(chars[0x28/4]) * 2;
-	if (m_gpuInfo.numSms < 12)
+	// Two SMs per TPC
+	m_gpuInfo.numSms = __builtin_popcount(nvdev::tpcMask()) * 2;
+	if (!m_gpuInfo.numSms)
 		m_gpuInfo.numSms = 12;
 
 	m_gpuInfo.zcullCtxSize = nvdev::zcullCtxSize();

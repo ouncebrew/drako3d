@@ -53,7 +53,6 @@ namespace
 		return rc;
 	}
 
-	// TODO(S2): queue priorities are not applied, every channel uses the TSG default
 	Result gpuChannelCreate(NvGpuChannel* c, u32 klass)
 	{
 		c->base.fd = s_invalidFd;
@@ -159,6 +158,25 @@ namespace
 		return rc;
 	}
 
+	// NVN accepts 0x80 to 0x3FC00, but then is rejected by the kernel on anything outside
+	// of 1000 to 50000, and along with this NVN promptly discards the failure. Why?
+	// We just clamp to the correct regions because why doesn't NVN?
+	void gpuChannelSetPriority(NvGpuChannel* c, u32 prioFlags)
+	{
+		u32 timeslice;
+		switch (prioFlags)
+		{
+			default:
+			case DkQueueFlags_MediumPrio: timeslice = 1024;  break;
+			case DkQueueFlags_HighPrio:   timeslice = 50000; break;
+			case DkQueueFlags_LowPrio:    timeslice = 1000;  break;
+		}
+
+		Result rc = nvIoctl(getTsgFd(c), NVDEV_TSG_SET_TIMESLICE, &timeslice);
+		if (R_FAILED(rc))
+			DK_WARNING("TSG timeslice 0x%x rejected (0x%x)", timeslice, rc);
+	}
+
 	Result gpuChannelKickoff(NvGpuChannel* c)
 	{
 		if (!c->num_entries)
@@ -209,6 +227,7 @@ DkResult Queue::initialize()
 	// Create GPU channel
 	if (R_FAILED(gpuChannelCreate(&m_gpuChannel, ClassId<Engine3D>)))
 		return DkResult_Fail;
+	gpuChannelSetPriority(&m_gpuChannel, m_flags & DkQueueFlags_PrioMask);
 
 	// Allocate cmdbuf
 	res = m_cmdBufMemBlock.initialize(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuUncached, nullptr, m_cmdBufRing.getSize());

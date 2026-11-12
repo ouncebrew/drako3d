@@ -30,6 +30,7 @@
 #define NVDEV_CH_SET_GR_MODE         NVDEV_IOC(3, 0x08, 0x48, 0x1F)
 #define NVDEV_CH_SET_ENGINE          NVDEV_IOC(1, 0x04, 0x48, 0x20)
 
+#define NVDEV_TSG_SET_TIMESLICE      NVDEV_IOC(3, 0x04, 0x54, 0x08)
 #define NVDEV_TSG_BIND_CHANNEL_EX    NVDEV_IOC(3, 0x18, 0x54, 0x0B)
 #define NVDEV_TSG_READ_SM_ERROR      NVDEV_IOC(3, 0x18, 0x54, 0x0C)
 
@@ -50,6 +51,7 @@ u32 ctrlGpuFd() noexcept;
 u32 asFd() noexcept;
 u64 const* characteristics() noexcept;
 u32 graphicsEngineId() noexcept;
+u32 tpcMask() noexcept;
 u32 zcullCtxSize() noexcept;
 nvioctl_zcull_info const* zcullInfo() noexcept;
 GsvSync* sync() noexcept;
