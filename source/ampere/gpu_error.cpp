@@ -66,6 +66,22 @@ namespace
 
 namespace
 {
+	[[maybe_unused]] const char* notificationName(u32 type)
+	{
+		switch (type)
+		{
+			case NvNotificationType_FifoErrorIdleTimeout:       return "idle timeout";
+			case NvNotificationType_GrErrorSwNotify:            return "graphics exception";
+			case NvNotificationType_GrSemaphoreTimeout:         return "semaphore timeout";
+			case NvNotificationType_GrIllegalNotify:            return "illegal notify";
+			case NvNotificationType_FifoErrorMmuErrFlt:         return "MMU fault";
+			case NvNotificationType_PbdmaError:                 return "pushbuffer DMA error";
+			case NvNotificationType_ResetChannelVerifError:     return "channel reset";
+			case NvNotificationType_PbdmaPushbufferCrcMismatch: return "pushbuffer CRC mismatch";
+			default:                                            return "unknown";
+		}
+	}
+
 	struct SmErrorRecord
 	{
 		u32 globalEsr;
@@ -111,7 +127,6 @@ void Device::checkQueueErrors() noexcept
 
 bool Queue::checkError()
 {
-	// TODO(S2): the notification/info words are assumed to keep their S1 layouts.
 	NvNotification notif = {};
 	if (R_FAILED(eventWait(&m_gpuChannel.error_event, 0)) ||
 		R_FAILED(nvIoctl(m_gpuChannel.base.fd, NVDEV_CH_GET_ERROR_NOTIF, &notif)) || !notif.status)
@@ -119,7 +134,7 @@ bool Queue::checkError()
 
 	DK_WARNING("Queue (%u) entered error state", m_id);
 	DK_WARNING("  timestamp: %lu", notif.timestamp);
-	DK_WARNING("  info32: %u", notif.info32);
+	DK_WARNING("  info32: %u (%s)", notif.info32, notificationName(notif.info32));
 	DK_WARNING("  info16: %u", notif.info16);
 	DK_WARNING("  status: %u", notif.status);
 
