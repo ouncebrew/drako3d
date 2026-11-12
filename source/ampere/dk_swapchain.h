@@ -13,7 +13,7 @@ class Swapchain : public ObjBase
 		bool hasMemory;
 		bool hasImage;
 		bool hasAlias;
-		bool presented;
+		u8 layerSlot;
 		GsvNativeSync release;
 	};
 
@@ -25,6 +25,7 @@ class Swapchain : public ObjBase
 	uint32_t m_numImages;
 	uint32_t m_freeHead;
 	uint32_t m_numFree;
+	int m_onScreen;
 	int32_t m_crop[4];
 	bool m_hasCrop;
 
@@ -38,7 +39,7 @@ public:
 		m_images{(DkImage const**)(void*)(this+1)},
 		m_slots{(Slot*)(void*)((DkImage const**)(void*)(this+1) + numImages)},
 		m_freeSlots{(uint32_t*)(void*)((Slot*)(void*)((DkImage const**)(void*)(this+1) + numImages) + numImages)},
-		m_numImages{}, m_freeHead{}, m_numFree{},
+		m_numImages{}, m_freeHead{}, m_numFree{}, m_onScreen{-1},
 		m_crop{}, m_hasCrop{}
 	{ }
 	~Swapchain();

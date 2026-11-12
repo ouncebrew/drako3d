@@ -12,23 +12,28 @@ using namespace maxwell;
 namespace
 {
 	constexpr u8 s_imageMemoryType = 3;
-	constexpr u32 s_pixelFormatRGBA8 = 1;
 	constexpr u8 s_blockFormatBlockLinear = 1;
 	constexpr u64 s_presentFlagImage = 1;
 	constexpr u64 s_releaseTimeoutNs = 1'000'000'000;
 
-	// TODO(S2): only the RGBA8 display format used by the system framebuffer is known
-	bool isSupportedFormat(DkImageFormat format)
+	// FP16 formats are left out currently
+	u32 getDisplayPixelFormat(DkImageFormat format)
 	{
 		switch (format)
 		{
 			case DkImageFormat_RGBA8_Unorm:
 			case DkImageFormat_RGBA8_Unorm_sRGB:
+				return 1;
+			case DkImageFormat_BGRA8_Unorm:
+			case DkImageFormat_BGRA8_Unorm_sRGB:
+				return 2;
 			case DkImageFormat_RGBX8_Unorm:
 			case DkImageFormat_RGBX8_Unorm_sRGB:
-				return true;
+				return 3;
+			case DkImageFormat_RGB10A2_Unorm:
+				return 4;
 			default:
-				return false;
+				return 0;
 		}
 	}
 
@@ -56,7 +61,7 @@ DkResult Swapchain::registerImage(uint32_t slot)
 
 	GsvImageLayout layout;
 	gsvMakeImageLayout(&layout, img.m_dimensions[0], img.m_dimensions[1], img.m_tileH + 3,
-		pitchGobs, s_pixelFormatRGBA8, s_blockFormatBlockLinear, 0);
+		pitchGobs, getDisplayPixelFormat(img.m_format), s_blockFormatBlockLinear, 0);
 
 	u64 size = 0;
 	if (R_FAILED(gsvGetImageSize(&layout, &size)))
@@ -129,7 +134,7 @@ DkResult Swapchain::initialize(void* nativeWindow, DkImage const* const images[]
 	m_numImages = numImages;
 	m_window = (NWindow*)nativeWindow;
 
-	if (!isSupportedFormat(images[0]->m_format))
+	if (!getDisplayPixelFormat(images[0]->m_format))
 		return DkResult_NotImplemented;
 	if (numImages > 64)
 		return DkResult_BadInput;
@@ -147,6 +152,17 @@ DkResult Swapchain::initialize(void* nativeWindow, DkImage const* const images[]
 	{
 		m_layer = nullptr;
 		return DkResult_Fail;
+	}
+
+	u64 freeSlots = 0;
+	if (R_FAILED(vi2GetLayerAvailability(m_layer, &freeSlots)))
+		return DkResult_Fail;
+	for (uint32_t i = 0; i < numImages; i ++)
+	{
+		if (!freeSlots)
+			return DkResult_Fail;
+		m_slots[i].layerSlot = __builtin_ctzll(freeSlots);
+		freeSlots &= freeSlots - 1;
 	}
 
 	for (uint32_t i = 0; i < numImages; i ++)
@@ -167,20 +183,23 @@ DkResult Swapchain::initialize(void* nativeWindow, DkImage const* const images[]
 
 Swapchain::~Swapchain()
 {
+	u64 freeSlots = 0;
+	if (m_layer && m_onScreen >= 0 && R_SUCCEEDED(vi2GetLayerAvailability(m_layer, &freeSlots)) && freeSlots)
+	{
+		Vi2PresentOptions opts;
+		makePresentOptions(opts, *m_images[m_onScreen]);
+		opts.flags &= ~s_presentFlagImage;
+
+		u64 slots = 0;
+		GsvNativeSync release = {};
+		Result rc = vi2UnregisterLayerImage(m_layer, __builtin_ctzll(freeSlots), &opts, &slots, &release);
+		if (R_FAILED(rc))
+			DK_WARNING("failed to take the display off the swapchain (rc=%08x)", rc);
+	}
+
 	for (uint32_t i = 0; i < m_numImages; i ++)
 	{
 		Slot& s = m_slots[i];
-		if (m_layer && s.presented)
-		{
-			Vi2PresentOptions opts;
-			makePresentOptions(opts, *m_images[i]);
-			opts.flags &= ~s_presentFlagImage;
-
-			u64 slots = 0;
-			GsvNativeSync release = {};
-			if (R_SUCCEEDED(vi2UnregisterLayerImage(m_layer, i, &opts, &slots, &release)))
-				s.release = release;
-		}
 		if (hasDependency(s.release))
 			gsvSyncWaitNative(nvdev::sync(), &s.release, s_releaseTimeoutNs);
 		retireImage(i);
@@ -242,14 +261,14 @@ void Swapchain::presentImage(int imageSlot, DkFence const& fence)
 
 	GsvNativeSync release = {};
 	u64 slots = 0;
-	Result rc = vi2PresentLayer(m_layer, imageSlot, m_slots[imageSlot].imageId, &opts, &producer, &slots, &release);
+	Result rc = vi2PresentLayer(m_layer, m_slots[imageSlot].layerSlot, m_slots[imageSlot].imageId, &opts, &producer, &slots, &release);
 	if (R_FAILED(rc) && hasProducer)
 	{
 		DK_WARNING("present with a producer dependency failed (rc=%08x)", rc);
 		DkFence wait = fence;
 		wait.wait();
 		producer = {};
-		rc = vi2PresentLayer(m_layer, imageSlot, m_slots[imageSlot].imageId, &opts, &producer, &slots, &release);
+		rc = vi2PresentLayer(m_layer, m_slots[imageSlot].layerSlot, m_slots[imageSlot].imageId, &opts, &producer, &slots, &release);
 	}
 	if (R_FAILED(rc))
 	{
@@ -257,7 +276,7 @@ void Swapchain::presentImage(int imageSlot, DkFence const& fence)
 		DK_ERROR(DkResult_Fail, "failed to enqueue buffer");
 		return;
 	}
-	m_slots[imageSlot].presented = true;
+	m_onScreen = imageSlot;
 	m_slots[imageSlot].release = release;
 	releaseSlot(imageSlot);
 }
