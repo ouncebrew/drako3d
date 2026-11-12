@@ -103,17 +103,24 @@ void Swapchain::makePresentOptions(Vi2PresentOptions& opts, DkImage const& img)
 	vi2MakeBasicPresentOptions(&opts, img.m_dimensions[0], img.m_dimensions[1], armGetSystemTick());
 	if (m_hasCrop)
 	{
-		opts.crop_left = m_crop[0];
-		opts.crop_top = m_crop[1];
-		opts.crop_right_inclusive = m_crop[2] - 1;
-		opts.crop_bottom_inclusive = m_crop[3] - 1;
+		int32_t right = m_crop[2] < (int32_t)img.m_dimensions[0] ? m_crop[2] : img.m_dimensions[0];
+		int32_t bottom = m_crop[3] < (int32_t)img.m_dimensions[1] ? m_crop[3] : img.m_dimensions[1];
+		int32_t left = m_crop[0] > 0 ? m_crop[0] : 0;
+		int32_t top = m_crop[1] > 0 ? m_crop[1] : 0;
+		if (right > left && bottom > top)
+		{
+			opts.crop_left = left;
+			opts.crop_top = top;
+			opts.crop_right_inclusive = right - 1;
+			opts.crop_bottom_inclusive = bottom - 1;
+		}
 	}
 
 	u16 num = 0, den = 0;
 	if (R_SUCCEEDED(nwindowGetPresentInterval(m_window, &num, &den)))
 	{
 		opts.interval_numerator = num;
-		opts.interval_denominator = den;
+		opts.interval_denominator = num ? den : 1;
 	}
 }
 
