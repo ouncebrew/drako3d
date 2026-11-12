@@ -14,6 +14,7 @@
 #define NVDEV_AS_BIND_CHANNEL        NVDEV_IOC(1, 0x04, 0x41, 0x01)
 #define NVDEV_AS_GET_VA_REGIONS      NVDEV_IOC(3, 0x40, 0x41, 0x08)
 #define NVDEV_AS_INITIALIZE_EX       NVDEV_IOC(1, 0x28, 0x41, 0x09)
+#define NVDEV_AS_GET_SYNC_RO_MAP     NVDEV_IOC(2, 0x10, 0x41, 0x0B)
 
 #define NVDEV_CH_SET_TIMEOUT         NVDEV_IOC(1, 0x04, 0x48, 0x03)
 #define NVDEV_CH_ALLOC_OBJ_CTX       NVDEV_IOC(3, 0x10, 0x48, 0x09)
@@ -62,5 +63,11 @@ Result changeKind(DkGpuAddr va, u64 size, u8 kind, u8& appliedKind) noexcept;
 // Fence ids are GSV producer ids
 Result fenceWait(NvFence const& fence, s32 timeout_us) noexcept;
 bool fenceReached(NvFence const& fence) noexcept;
+
+// For semaphore acquires
+bool syncpointAddr(u32 id, DkGpuAddr& out) noexcept;
+
+bool fenceFromNative(GsvNativeSync const& sync, NvFence& out) noexcept;
+void fenceToNative(NvFence const& fence, GsvNativeSync& out) noexcept;
 
 }

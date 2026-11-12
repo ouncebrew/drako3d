@@ -199,28 +199,52 @@ void Swapchain::acquireImage(int& imageSlot, DkFence& fence)
 	m_freeHead = (m_freeHead + 1) % m_numImages;
 	m_numFree --;
 
-	// TODO(S2): the release is waited for on the CPU rather than handed to the queue
 	Slot& s = m_slots[imageSlot];
 	if (hasDependency(s.release))
 	{
-		gsvSyncWaitNative(nvdev::sync(), &s.release, UINT64_MAX);
+		NvFence release;
+		DkGpuAddr addr;
+		if (nvdev::fenceFromNative(s.release, release) && nvdev::syncpointAddr(release.id, addr))
+		{
+			fence.m_type = DkFence::External;
+			fence.m_external.m_fence = {};
+			fence.m_external.m_fence.num_fences = 1;
+			fence.m_external.m_fence.fences[0] = release;
+		}
+		else
+			gsvSyncWaitNative(nvdev::sync(), &s.release, UINT64_MAX);
 		s.release = {};
 	}
 }
 
 void Swapchain::presentImage(int imageSlot, DkFence const& fence)
 {
-	// TODO(S2): the producer dependency is left empty, so rendering is waited for here
-	DkFence renderDone = fence;
-	renderDone.wait();
-
 	Vi2PresentOptions opts;
 	makePresentOptions(opts, *m_images[imageSlot]);
 
 	GsvNativeSync producer = {};
+	NvFence const& renderDone = fence.m_internal.m_fence;
+	bool hasProducer = fence.m_type == DkFence::Internal && (s32)renderDone.id >= 0 && renderDone.value;
+	if (hasProducer)
+		nvdev::fenceToNative(renderDone, producer);
+	else
+	{
+		DkFence wait = fence;
+		wait.wait();
+	}
+
 	GsvNativeSync release = {};
 	u64 slots = 0;
-	if (R_FAILED(vi2PresentLayer(m_layer, imageSlot, m_slots[imageSlot].imageId, &opts, &producer, &slots, &release)))
+	Result rc = vi2PresentLayer(m_layer, imageSlot, m_slots[imageSlot].imageId, &opts, &producer, &slots, &release);
+	if (R_FAILED(rc) && hasProducer)
+	{
+		DK_WARNING("present with a producer dependency failed (rc=%08x)", rc);
+		DkFence wait = fence;
+		wait.wait();
+		producer = {};
+		rc = vi2PresentLayer(m_layer, imageSlot, m_slots[imageSlot].imageId, &opts, &producer, &slots, &release);
+	}
+	if (R_FAILED(rc))
 	{
 		releaseSlot(imageSlot);
 		DK_ERROR(DkResult_Fail, "failed to enqueue buffer");
@@ -326,6 +350,8 @@ void dkQueuePresentImage(DkQueue obj, DkSwapchain swapchain, int imageSlot)
 	DkFence fence;
 	obj->signalFence(fence, true);
 	obj->flush();
+	if (fence.m_type == DkFence::Internal)
+		fence.m_internal.m_fence = obj->getSubmitFence();
 	swapchain->presentImage(imageSlot, fence);
 }
 

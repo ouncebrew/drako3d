@@ -172,6 +172,9 @@ namespace
 		u64 chars[0xE8/8];
 		u64 charsBlock[0xD8/8];
 		u32 engineId;
+		DkGpuAddr syncRoBase;
+		u32 syncRoStride;
+		u32 syncRoCount;
 
 		Mutex vaMutex;
 		u32 numHeaps;
@@ -328,6 +331,16 @@ namespace
 		return g_nv.numHeaps ? 0 : MAKERESULT(Module_LibnxNvidia, LibnxNvidiaError_InsufficientMemory);
 	}
 
+	void querySyncpointShim()
+	{
+		struct { u64 base; u32 stride; u32 count; } map = {};
+		if (R_FAILED(nvIoctl(g_nv.asFd, NVDEV_AS_GET_SYNC_RO_MAP, &map)) || !map.base || !map.stride)
+			map = {};
+		g_nv.syncRoBase = map.base;
+		g_nv.syncRoStride = map.stride;
+		g_nv.syncRoCount = map.count;
+	}
+
 	Result traceStep(const char* step, Result rc)
 	{
 #ifdef DEBUG
@@ -404,6 +417,8 @@ namespace
 			res = traceStep("nvOpen(as-gpu)", nvOpen(&g_nv.asFd, "/dev/nvhost-as-gpu"));
 		if (R_SUCCEEDED(res))
 			res = traceStep("setupAddressSpace", setupAddressSpace(userRanges[0]));
+		if (R_SUCCEEDED(res))
+			querySyncpointShim();
 
 		if (R_FAILED(res))
 			nvLibCleanup();
@@ -599,6 +614,44 @@ Result dk::detail::nvdev::fenceWait(NvFence const& fence, s32 timeout_us) noexce
 		svcSleepThread(50000);
 	}
 	return 0;
+}
+
+bool dk::detail::nvdev::syncpointAddr(u32 id, DkGpuAddr& out) noexcept
+{
+	if (!g_nv.syncRoBase || id >= g_nv.syncRoCount)
+		return false;
+	out = g_nv.syncRoBase + u64(id)*g_nv.syncRoStride;
+	return true;
+}
+
+bool dk::detail::nvdev::fenceFromNative(GsvNativeSync const& sync, NvFence& out) noexcept
+{
+	u32 id;
+	u64 target;
+	memcpy(&id, &sync.data[0], sizeof(id));
+	memcpy(&target, &sync.data[8], sizeof(target));
+	if (sync.data[4] > 1)
+		return false;
+	out.id = ~id;
+	out.value = (u32)target;
+	return true;
+}
+
+void dk::detail::nvdev::fenceToNative(NvFence const& fence, GsvNativeSync& out) noexcept
+{
+	u32 id = ~fence.id;
+	u64 target = fence.value;
+	u64 current = 0;
+	u8 mode = 0;
+	if (R_SUCCEEDED(gsvSyncReadCounter(&g_nv.sync, fence.id, &current, &mode)) && mode == 1 && current != UINT64_MAX)
+		target = current + (s64)(s32)(fence.value - (u32)current);
+	else
+		mode = 0;
+
+	out = {};
+	memcpy(&out.data[0], &id, sizeof(id));
+	out.data[4] = mode;
+	memcpy(&out.data[8], &target, sizeof(target));
 }
 
 DkResult Device::initialize()

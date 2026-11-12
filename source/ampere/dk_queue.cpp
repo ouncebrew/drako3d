@@ -382,10 +382,17 @@ void Queue::waitFence(DkFence& fence)
 			);
 			break;
 		case DkFence::Type::External:
-			// TODO(S2): GSV producer counters cannot be waited on from the pushbuffer, so the
-			// submitting thread blocks instead
 			for (u32 i = 0; i < fence.m_external.m_fence.num_fences; i ++)
-				nvdev::fenceWait(fence.m_external.m_fence.fences[i], -1);
+			{
+				NvFence const& f = fence.m_external.m_fence.fences[i];
+				DkGpuAddr addr;
+				if ((s32)f.id < 0)
+					continue;
+				if (nvdev::syncpointAddr(f.id, addr))
+					w << Cmd(Gpfifo, SemaphoreOffset{}, Iova(addr), f.value, S::Operation::AcqGeq | S::AcquireSwitch{});
+				else
+					nvdev::fenceWait(f, -1);
+			}
 			break;
 		default:
 			DK_ERROR(DkResult_BadState, "invalid fence type");
