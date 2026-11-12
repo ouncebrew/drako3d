@@ -28,6 +28,8 @@ namespace
 		w << CmdList<1>{ MakeCmdHeader(NonIncreasing, (sizeBytes + 3) / 4, SubchannelCompute, C::LoadInlineData{}) };
 	}
 
+	constexpr uint32_t SmsPerTpc = 2;
+
 	constexpr uint32_t SmemCarveoutsKb[] = { 0, 8, 16, 32, 64, 100 };
 	constexpr uint32_t NumSmemCarveouts = sizeof(SmemCarveoutsKb)/sizeof(SmemCarveoutsKb[0]);
 
@@ -60,8 +62,8 @@ void ComputeQueue::initComputeEngine()
 	w.reserve(17);
 
 	DkGpuAddr scratchMemIova = m_parent.m_workBuf.getScratchMem();
-	uint32_t scratchMemPerSm = m_parent.m_workBuf.getScratchMemSize() / dev->getGpuInfo().numSms;
-	scratchMemPerSm &= ~0x7FFF;
+	uint32_t scratchMemPerTpc = m_parent.m_workBuf.getScratchMemSize() / (dev->getGpuInfo().numSms / SmsPerTpc);
+	scratchMemPerTpc &= ~0x7FFF;
 
 	w << CmdInline(Compute, SetShaderExceptions{}, 0);
 	w << CmdInline(Compute, SetBindlessTexture{}, 0); // Using constbuf0 as the texture constbuf
@@ -72,7 +74,7 @@ void ComputeQueue::initComputeEngine()
 	);
 	w << Cmd(Compute, SetShaderLocalMemory{}, Iova(scratchMemIova));
 	w << Cmd(Compute, SetShaderLocalMemoryNonThrottledA{},
-		0, scratchMemPerSm, 0x100
+		0, scratchMemPerTpc, 0x100
 	);
 }
 

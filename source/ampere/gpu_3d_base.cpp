@@ -98,7 +98,8 @@ void Queue::setup3DEngine()
 		E::SetSpaVersion::Major{SpaVersionMajor} | E::SetSpaVersion::Minor{SpaVersionMinor}
 	);
 	w << Cmd(3D, SetShaderLocalMemoryWindow{}, 0x01000000);
-	w << Cmd(3D, SetShaderLocalMemory{}, Iova(m_workBuf.getScratchMem()), Iova(m_workBuf.getScratchMemSize()));
+	w << Cmd(3D, SetShaderLocalMemory{}, Iova(m_workBuf.getScratchMem()), Iova(m_workBuf.getScratchMemSize()),
+		m_workBuf.getPerWarpScratchSize());
 	w << CmdInline(3D, Unknown44c{}, 0x13);
 	w << CmdInline(3D, Unknown0dd{}, 0x00);
 	w << Cmd(3D, SetRenderLayer{}, E::SetRenderLayer::UseIndexFromVTG{});

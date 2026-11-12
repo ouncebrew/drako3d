@@ -86,6 +86,7 @@ engine _3D 0xC797;
 
 0x1E4 SetShaderLocalMemory iova;
 0x1E6 SetShaderLocalMemorySize iova; // 40-bit size
+0x1E8 SetShaderLocalMemoryDefaultSizePerWarp;
 
 0x1F0 ZcullWidth;
 0x1F1 ZcullHeight;
