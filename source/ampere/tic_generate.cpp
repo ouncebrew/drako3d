@@ -114,7 +114,8 @@ void dkImageDescriptorInitialize(DkImageDescriptor* obj, DkImageView const* view
 	if (origType == DkImageType_1DArray || origType == DkImageType_2DArray || origType == DkImageType_2DMSArray || origType == DkImageType_CubemapArray)
 		iova += view->layerOffset * image->m_layerSize;
 
-	if (decayMS)
+	bool dimsInSamples = decayMS || (usesLoadOrStore && image->m_numSamplesLog2 != DkMsMode_1x);
+	if (dimsInSamples)
 	{
 		width *= image->m_samplesX;
 		height *= image->m_samplesY;
