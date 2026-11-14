@@ -1,4 +1,5 @@
 #include <stdarg.h>
+#include <stdlib.h>
 #include "dk_device.h"
 #include "nv_device.h"
 
@@ -153,6 +154,7 @@ namespace
 	{
 		Mutex mutex;
 		u32 refCount;
+		bool ready;
 		bool nvInit;
 		bool syncOpen;
 		bool gpuOpen;
@@ -452,10 +454,20 @@ namespace
 		return res;
 	}
 
+	void nvLibAtExit()
+	{
+		MutexHolder m{g_nv.mutex};
+		if (g_nv.ready && !g_nv.refCount)
+		{
+			nvLibCleanup();
+			g_nv.ready = false;
+		}
+	}
+
 	Result nvLibInit()
 	{
 		MutexHolder m{g_nv.mutex};
-		if (g_nv.refCount)
+		if (g_nv.ready)
 		{
 			g_nv.refCount++;
 			return 0;
@@ -463,15 +475,19 @@ namespace
 
 		Result res = nvLibSetup();
 		if (R_SUCCEEDED(res))
+		{
+			g_nv.ready = true;
 			g_nv.refCount = 1;
+			atexit(nvLibAtExit);
+		}
 		return res;
 	}
 
 	void nvLibExit()
 	{
 		MutexHolder m{g_nv.mutex};
-		if (g_nv.refCount && !--g_nv.refCount)
-			nvLibCleanup();
+		if (g_nv.refCount)
+			g_nv.refCount--;
 	}
 }
 
