@@ -11,6 +11,15 @@ namespace dk::detail
 
 class ComputeQueue;
 
+#if DK_GPU_AMPERE
+struct KickoffJobs
+{
+	static constexpr uint32_t s_maxPending = 8;
+	NvFence fences[s_maxPending];
+	uint32_t next;
+};
+#endif
+
 class Queue : public ObjBase
 {
 	friend class ComputeQueue;
@@ -29,6 +38,9 @@ class Queue : public ObjBase
 	} m_state;
 
 	NvGpuChannel m_gpuChannel;
+#if DK_GPU_AMPERE
+	KickoffJobs m_kickoffJobs;
+#endif
 	MemBlock m_cmdBufMemBlock;
 	CmdBuf m_cmdBuf;
 

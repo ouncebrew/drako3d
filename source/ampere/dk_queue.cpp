@@ -93,7 +93,7 @@ namespace
 				u32 flags;
 				u32 producer_id;
 				u32 reserved[4];
-			} alloc = { GPFIFO_QUEUE_SIZE, 8, 2, 0, {} };
+			} alloc = { GPFIFO_QUEUE_SIZE, KickoffJobs::s_maxPending, 2, 0, {} };
 			rc = nvIoctl(fd, NVDEV_CH_ALLOC_GPFIFO_EX2, &alloc);
 			if (R_SUCCEEDED(rc) && !alloc.producer_id)
 				rc = MAKERESULT(Module_LibnxNvidia, LibnxNvidiaError_BadValue);
@@ -177,10 +177,13 @@ namespace
 			DK_WARNING("TSG timeslice 0x%x rejected (0x%x)", timeslice, rc);
 	}
 
-	Result gpuChannelKickoff(NvGpuChannel* c)
+	Result gpuChannelKickoff(NvGpuChannel* c, KickoffJobs& jobs)
 	{
 		if (!c->num_entries)
 			return 0;
+
+		NvFence& slot = jobs.fences[jobs.next % KickoffJobs::s_maxPending];
+		nvdev::fenceWait(slot, -1);
 
 		struct
 		{
@@ -194,6 +197,8 @@ namespace
 		{
 			if ((u32)data.fence == c->fence.id)
 				c->fence.value = (u32)(data.fence >> 32);
+			slot = { (u32)data.fence, (u32)(data.fence >> 32) };
+			jobs.next ++;
 			c->fence_incr = 0;
 			c->num_entries = 0;
 		}
@@ -201,11 +206,11 @@ namespace
 		return rc;
 	}
 
-	Result gpuChannelAppendEntry(NvGpuChannel* c, iova_t start, u32 num_cmds, u32 flags, bool autoKick)
+	Result gpuChannelAppendEntry(NvGpuChannel* c, KickoffJobs& jobs, iova_t start, u32 num_cmds, u32 flags, bool autoKick)
 	{
 		if (c->num_entries >= GPFIFO_QUEUE_SIZE)
 		{
-			Result rc = gpuChannelKickoff(c);
+			Result rc = gpuChannelKickoff(c, jobs);
 			if (R_FAILED(rc))
 				return rc;
 		}
@@ -215,7 +220,7 @@ namespace
 		entry->desc32[1] |= flags | (num_cmds << 10);
 
 		if (autoKick && c->num_entries >= s_autoKickThreshold)
-			return gpuChannelKickoff(c);
+			return gpuChannelKickoff(c, jobs);
 		return 0;
 	}
 }
@@ -223,6 +228,10 @@ namespace
 DkResult Queue::initialize()
 {
 	DkResult res;
+
+	for (auto& f : m_kickoffJobs.fences)
+		f = { UINT32_MAX, 0 };
+	m_kickoffJobs.next = 0;
 
 	// Create GPU channel
 	if (R_FAILED(gpuChannelCreate(&m_gpuChannel, ClassId<Engine3D>)))
@@ -375,7 +384,7 @@ void Queue::appendGpfifoEntries(CtrlCmdGpfifoEntry const* entries, uint32_t numE
 #endif
 		u32 flags = GPFIFO_ENTRY_NOT_MAIN | ((ent.flags & CtrlCmdGpfifoEntry::NoPrefetch) ? GPFIFO_ENTRY_NO_PREFETCH : 0);
 		bool autoKick = (ent.flags & CtrlCmdGpfifoEntry::AutoKick) != 0;
-		if (R_FAILED(gpuChannelAppendEntry(&m_gpuChannel, ent.iova, ent.numCmds, flags, autoKick)))
+		if (R_FAILED(gpuChannelAppendEntry(&m_gpuChannel, m_kickoffJobs, ent.iova, ent.numCmds, flags, autoKick)))
 		{
 			if (!checkError())
 				DK_ERROR(DkResult_Fail, "gpfifo entry append failed, but no error was reported");
@@ -536,7 +545,7 @@ void Queue::flush()
 		flushCmdBuf();
 		// TODO:
 		// - Do the ZBC shit
-		if (R_FAILED(gpuChannelKickoff(&m_gpuChannel)))
+		if (R_FAILED(gpuChannelKickoff(&m_gpuChannel, m_kickoffJobs)))
 		{
 			if (!checkError())
 				DK_ERROR(DkResult_Fail, "gpu channel kickoff failed, but no error was reported");
