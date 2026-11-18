@@ -2,7 +2,7 @@
 
 ## Introduction
 
-drako3d is a low level graphics programming API for use in Nintendo Switch homebrew (along with devkitA64 and libnx), taking inspiration from Vulkan and drawing many similarities stemming from a year-and-a-half long (and still ongoing!) reverse engineering (RE) effort centered around the official NVN library present in official software.
+drako3d is a low level graphics programming API for use in Nintendo Switch 2 homebrew (along with devkitA64 and libounce), taking inspiration from Vulkan and drawing many similarities stemming from the official NVN library present in official software.
 
 This primer is meant to show potential users of this library around the key foundations of its design, as well as several usage tips and hints that have been discovered throughout the RE and development process.
 
