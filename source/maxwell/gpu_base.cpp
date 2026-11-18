@@ -13,6 +13,8 @@
 using namespace maxwell;
 using namespace dk::detail;
 
+static void recordBarrier(DkCmdBuf obj, DkBarrier mode, uint32_t invalidateFlags);
+
 void Queue::setupEngines()
 {
 	CmdBufWriter w{&m_cmdBuf};
@@ -30,7 +32,7 @@ void Queue::postSubmitFlush()
 {
 	// Invalidate image cache, image/sampler descriptor cache, shader caches, and L2 cache
 	// This is done to ensure the visibility of CPU updates between calls to dkQueueFlush()
-	dkCmdBufBarrier(&m_cmdBuf,
+	recordBarrier(&m_cmdBuf,
 		DkBarrier_None,
 		DkInvalidateFlags_Image |
 		DkInvalidateFlags_Shader |
@@ -50,6 +52,11 @@ void Queue::postSubmitFlush()
 void dkCmdBufBarrier(DkCmdBuf obj, DkBarrier mode, uint32_t invalidateFlags)
 {
 	DK_ENTRYPOINT(obj);
+	recordBarrier(obj, mode, invalidateFlags);
+}
+
+static void recordBarrier(DkCmdBuf obj, DkBarrier mode, uint32_t invalidateFlags)
+{
 	CmdBufWriter w{obj};
 	w.reserve(8 + 2*L2CacheOpSize);
 
