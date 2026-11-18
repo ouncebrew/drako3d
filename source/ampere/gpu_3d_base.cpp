@@ -516,8 +516,8 @@ void dkCmdBufDraw(DkCmdBuf obj, DkPrimitive prim, uint32_t vertexCount, uint32_t
 	CmdBufWriter w{obj};
 	w.reserve(7);
 
-	if (firstInstance)
-		w << MacroInline(SelectDriverConstbuf, 0); // needed for updating gl_BaseInstance in the driver constbuf
+	if (firstVertex || firstInstance)
+		w << MacroInline(SelectDriverConstbuf, 0); // needed for updating BaseVertex/gl_BaseInstance in the driver constbuf
 	w << Macro(Draw, prim, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
@@ -529,7 +529,7 @@ void dkCmdBufDrawIndirect(DkCmdBuf obj, DkPrimitive prim, DkGpuAddr indirect)
 	CmdBufWriter w{obj};
 	w.reserve(3);
 
-	w << MacroInline(SelectDriverConstbuf, 0); // needed for updating gl_BaseInstance in the driver constbuf
+	w << MacroInline(SelectDriverConstbuf, 0);
 	w << CmdList<2>{ MakeCmdHeader(IncreaseOnce, 5, Subchannel3D, MmeMacroDraw), prim };
 	w.split(CtrlCmdGpfifoEntry::NoPrefetch);
 	w.addRaw(indirect, 4, CtrlCmdGpfifoEntry::AutoKick);
@@ -542,7 +542,7 @@ void dkCmdBufDrawIndexed(DkCmdBuf obj, DkPrimitive prim, uint32_t indexCount, ui
 	w.reserve(8);
 
 	if (vertexOffset || firstInstance)
-		w << MacroInline(SelectDriverConstbuf, 0); // needed for updating gl_BaseVertex/gl_BaseInstance in the driver constbuf
+		w << MacroInline(SelectDriverConstbuf, 0);
 	w << Macro(DrawIndexed, prim, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
 }
 
@@ -554,7 +554,7 @@ void dkCmdBufDrawIndexedIndirect(DkCmdBuf obj, DkPrimitive prim, DkGpuAddr indir
 	CmdBufWriter w{obj};
 	w.reserve(3);
 
-	w << MacroInline(SelectDriverConstbuf, 0); // needed for updating gl_BaseVertex/gl_BaseInstance in the driver constbuf
+	w << MacroInline(SelectDriverConstbuf, 0);
 	w << CmdList<2>{ MakeCmdHeader(IncreaseOnce, 6, Subchannel3D, MmeMacroDrawIndexed), prim };
 	w.split(CtrlCmdGpfifoEntry::NoPrefetch);
 	w.addRaw(indirect, 5, CtrlCmdGpfifoEntry::AutoKick);

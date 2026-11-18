@@ -1,14 +1,15 @@
 
-# Locations of gl_BaseVertex and gl_BaseInstance
+# Locations of gl_BaseVertex (OpenGL), gl_BaseInstance, gl_DrawID, and BaseVertex (Vulkan)
 %equ DriverCbufBaseVertex   0x640
 %equ DriverCbufBaseInstance 0x644
+%equ DriverCbufFirstVertex  0x64C
 
 # Non-indexed single-draw
 # Arguments:
 # - 0: Primitive
 # - 1: Vertex count
 # - 2: Instance count
-# - 3: First vertex (does not update gl_BaseVertex)
+# - 3: First vertex (updates Vulkan BaseVertex)
 # - 4: First instance (updates gl_BaseInstance)
 Draw::
 	{
@@ -17,27 +18,38 @@ Draw::
 	}
 	{
 		$r7 = ADD $load0 $zero # instance count
-		$r2 = ADD $zero 1
-		mthd(DrawArraysFirst, incr=0)
-		emit($load1)           # first vertex
+		$r3 = ADD $load1 $zero # first vertex
 	}
-	$r5 = ADD $load0 $zero
+	{
+		$r5 = ADD $load0 $zero # first instance
+		$alu1 = ADD $r3 $zero
+		mthd(DrawArraysFirst, incr=0)
+		emit($alu1)
+	}
 	BEQ $r7 $zero EXIT
 	{
 		$alu0 = ADD $r5 $zero
+		$r2 = ADD $zero 1
 		mthd(DrawBaseInstance, incr=0)
 		emit($alu0) # (Unconditional write to DrawBaseInstance)
 	}
-	BEQ $r5 $zero .drawLoop # skip constbuf update if base instance is 0
+	$r4 = OR $r3 $r5
+	BEQ $r4 $zero .drawLoop # skip constbuf update if both first vertex and first instance are 0
 
-	# Update gl_BaseInstance
+	# Update gl_BaseInstance and Vulkan BaseVertex
 	# It is assumed that the caller of this macro used SelectDriverConstbuf
-	# previously (unless the BaseInstance parameter is a constant zero)
+	# previously (unless said parameters are a constant zero)
 	{
 		$alu0 = ADD $r5 $zero
 		mthd(LoadConstbufOffset, incr=1)
 		emit(DriverCbufBaseInstance)
 		emit($alu0)
+	}
+	{
+		$alu0 = ADD $zero $zero
+		$alu1 = ADD $r3 $zero
+		emit($alu0)
+		emit($alu1)
 	}
 
 .drawLoop
@@ -60,13 +72,19 @@ Draw::
 	}
 	BNE $r7 $zero .drawLoop
 
-	# We're done. Reset gl_BaseInstance back to 0 if needed
-	BEQ $r5 $zero EXIT
-	*{
+	# Reset gl_BaseInstance and Vulkan BaseVertex back to 0 if needed
+	BEQ $r4 $zero EXIT
+	{
 		$alu0 = ADD $zero $zero
 		mthd(LoadConstbufOffset, incr=1)
 		emit(DriverCbufBaseInstance)
 		emit($alu0)
+	}
+	*{
+		$alu0 = ADD $zero $zero
+		$alu1 = ADD $zero $zero
+		emit($alu0)
+		emit($alu1)
 	}
 	nop
 
@@ -76,7 +94,7 @@ Draw::
 # - 1: Index count
 # - 2: Instance count
 # - 3: First index
-# - 4: Vertex offset (updates gl_BaseVertex)
+# - 4: Vertex offset (updates gl_BaseVertex and Vulkan BaseVertex)
 # - 5: First instance (updates gl_BaseInstance)
 DrawIndexed::
 	{
@@ -109,7 +127,7 @@ DrawIndexed::
 	}
 	BEQ $r5 $zero .drawLoop # Skip constbuf update if vertex offset and first instance are both zero
 
-	# Update gl_BaseVertex and gl_BaseInstance in the drako3d driver constbuf
+	# Update gl_BaseVertex, gl_BaseInstance, and Vulkan BaseVertex in the drako3d driver constbuf
 	# It is assumed that the caller of this macro used SelectDriverConstbuf
 	# previously (unless said parameters are a constant zero)
 	{
@@ -120,6 +138,12 @@ DrawIndexed::
 	}
 	{
 		$alu0 = ADD $r4 $zero
+		$alu1 = ADD $zero $zero
+		emit($alu0)
+		emit($alu1) # gl_DrawID stays 0
+	}
+	{
+		$alu0 = ADD $r3 $zero
 		emit($alu0)
 	}
 
@@ -143,13 +167,19 @@ DrawIndexed::
 	}
 	BNE $r7 $zero .drawLoop
 
-	# We're done; now reset gl_BaseVertex and gl_BaseInstance back to 0 if needed
+	# Reset gl_BaseVertex, gl_BaseInstance and Vulkan BaseVertex back to 0 if needed
 	BEQ $r5 $zero .resetBaseVertex
 	{
 		$alu0 = ADD $zero $zero
 		mthd(LoadConstbufOffset, incr=1)
 		emit(DriverCbufBaseVertex)
 		emit($alu0)
+	}
+	{
+		$alu0 = ADD $zero $zero
+		$alu1 = ADD $zero $zero
+		emit($alu0)
+		emit($alu1)
 	}
 	{
 		$alu0 = ADD $zero $zero

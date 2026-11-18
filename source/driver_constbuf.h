@@ -38,7 +38,8 @@ namespace dk::detail
 		uint32_t baseVertex;
 		uint32_t baseInstance;
 		uint32_t drawId;
-		uint8_t _padding[0x7000 - 0x64C];
+		uint32_t firstVertex;
+		uint8_t _padding[0x7000 - 0x650];
 		GraphicsHandleCbuf handles[DkStage_MaxGraphics];
 	};
 
@@ -46,6 +47,7 @@ namespace dk::detail
 	static_assert(offsetof(GraphicsDriverCbuf, baseVertex) == 0x640, "Bad S2 driver constbuf layout");
 	static_assert(offsetof(GraphicsDriverCbuf, baseInstance) == 0x644, "Bad S2 driver constbuf layout");
 	static_assert(offsetof(GraphicsDriverCbuf, drawId) == 0x648, "Bad S2 driver constbuf layout");
+	static_assert(offsetof(GraphicsDriverCbuf, firstVertex) == 0x64C, "Bad S2 driver constbuf layout");
 	static_assert(offsetof(GraphicsDriverCbuf, handles) == 0x7000, "Bad S2 driver constbuf layout");
 	static_assert(offsetof(HandleCbuf, textures) == 0x20, "Bad S2 handle constbuf layout");
 	static_assert(offsetof(HandleCbuf, images) == 0x120, "Bad S2 handle constbuf layout");
