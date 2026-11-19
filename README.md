@@ -33,10 +33,6 @@ drako3d is currently wip, but it should support everything deko3d does on Switch
 - Colour/depth compression
 - GPU error reporting
 
-### Known limitations
-
-- There's no shader compiler yet. S2 shaders currently have to be hand-assembled. This is being worked on.
-
 ## Building
 
 Building drako3d requires devkitPro, [drakotools](https://github.com/ouncebrew/drakotools) (`drakodef` and `drakomme`) on your `PATH`, and either libounce (Switch 2) or libnx (Switch 1).
