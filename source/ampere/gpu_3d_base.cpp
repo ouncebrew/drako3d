@@ -178,7 +178,7 @@ void Queue::setup3DEngine()
 	w << MacroSetRegisterInArray<E::VertexArray>(E::VertexArray::Start{}+1, 0x1000);
 	w << MacroFillRegisters(E::VertexArraySize{}, 1, 32, 0);
 
-	w << Cmd(3D, IndexBufferSize{}, Iova(0xFFFFFFFFFFUL));
+	w << Cmd(3D, IndexBufferSize{}, Iova(0xFFFFFFFFUL));
 	w << CmdInline(3D, SampleCounterEnable{}, 1);
 	w << CmdInline(3D, ClipDistanceEnable{}, 0xFF); // Enable all clip distances
 	w << MacroFillArray<E::MultisampleSampleMask>(0xFFFF);
