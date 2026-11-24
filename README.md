@@ -53,7 +53,7 @@ However, it is more than likely once more has been finalised with UAM2, that som
 
 ### Is this a clone of NVN2?
 
-drako3d is not a clone of NVN2 just as drako3d wasn't a clone of NVN. However, drako3d was developed as a result of NVN2 reverse engineering work, and as such it borrows many implementation ideas. Essentially, drako3d was designed to fulfill the same place in homebrew that NVN does in official software.
+drako3d is not a clone of NVN2 just as deko3d wasn't a clone of NVN. However, drako3d was developed as a result of NVN2 reverse engineering work, and as such it borrows many implementation ideas. Essentially, drako3d was designed to fulfill the same place in homebrew that NVN does in official software.
 
 ### Why and when should I use drako3d instead of kaiHEN's OpenGL/Vulkan drivers?
 
