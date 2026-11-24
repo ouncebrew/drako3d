@@ -14,7 +14,7 @@ In conclusion, drako3d is the homebrew answer to Nintendo and Nvidia's proprieta
 
 ## Current status
 
-drako3d is currently wip, but it should support everything deko3d does on Switch 1. The public API (`deko3d.h` / `deko3d.hpp`, `Dk*` / `dk::` names) is unchanged from deko3d, and the library can still be built for the original Switch (GM20B) with `GPU_ARCH=maxwell`, however, this is a first and foremost Switch 2 project. If you are exclusively targeting Switch 1 then you should really just use deko3d.
+drako3d is currently wip, but it should support everything deko3d does on Switch 1. The public API (`deko3d.h` / `deko3d.hpp`, `Dk*` / `dk::` names) is unchanged from deko3d (other than file-names), and the library can still be built for the original Switch (GM20B) with `GPU_ARCH=maxwell`, however, this is a first and foremost Switch 2 project. If you are exclusively targeting Switch 1 then you should really just use deko3d.
 
 ### Working
 
