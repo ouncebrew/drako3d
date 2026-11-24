@@ -2,6 +2,8 @@
 lib/
 debug/
 release/
+release-shared/
 
 *~
 *.bz2
+/debug-shared

@@ -129,10 +129,23 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 			$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 			-I.
 
-.PHONY: clean all
+.PHONY: clean all shared
 
 #---------------------------------------------------------------------------------
+# Static libraries build for both GPUs. Shared libraries build only for
+# Switch 2 (GPU_ARCH=ampere, libounce), following libounce's switch2_rules:
+# shared objects use SWITCH2_SHARED_ARCH (initial-exec TLS) and link with
+# SWITCH2_SHARED_SPECS. Switch 1 (maxwell, libnx) has no dynamic loader,
+# so it stays static-only.
+#---------------------------------------------------------------------------------
+ifeq ($(GPU_ARCH),ampere)
+all: lib/libdrako3d.a lib/libdrako3dd.a lib/shared/libdrako3d.so.1 lib/shared/libdrako3dd.so.1 lib/shared/nro/libdrako3d.so.1 lib/shared/nro/libdrako3dd.so.1 lib/shared/libdrako3d.so lib/shared/libdrako3dd.so
+shared: lib/shared/libdrako3d.so.1 lib/shared/libdrako3dd.so.1 lib/shared/nro/libdrako3d.so.1 lib/shared/nro/libdrako3dd.so.1 lib/shared/libdrako3d.so lib/shared/libdrako3dd.so
+else
 all: lib/libdrako3d.a lib/libdrako3dd.a
+shared:
+	@echo "error: shared libraries are only supported for GPU_ARCH=ampere (Switch 2)" >&2; exit 1
+endif
 
 dist-bin: all
 	@tar --exclude=*~ -cjf drako3d-$(VERSION).tar.bz2 include lib
@@ -149,10 +162,22 @@ install: dist-bin
 lib:
 	@[ -d $@ ] || mkdir -p $@
 
+lib/shared:
+	@[ -d $@ ] || mkdir -p $@
+
+lib/shared/nro:
+	@[ -d $@ ] || mkdir -p $@
+
 release:
 	@[ -d $@ ] || mkdir -p $@
 
 debug:
+	@[ -d $@ ] || mkdir -p $@
+
+release-shared:
+	@[ -d $@ ] || mkdir -p $@
+
+debug-shared:
 	@[ -d $@ ] || mkdir -p $@
 
 lib/libdrako3d.a : lib release $(SOURCES) $(INCLUDES)
@@ -169,10 +194,38 @@ lib/libdrako3dd.a : lib debug $(SOURCES) $(INCLUDES)
 	--no-print-directory -C debug \
 	-f $(CURDIR)/Makefile
 
+ifeq ($(GPU_ARCH),ampere)
+lib/shared/libdrako3d.so.1 : lib/shared release-shared $(SOURCES) $(INCLUDES)
+	@$(MAKE) BUILD=release-shared OUTPUT=$(CURDIR)/$@ ARCH="$(SWITCH2_SHARED_ARCH)" \
+	BUILD_CFLAGS="-DNDEBUG=1 -O2 $(EXTRAOPT)" \
+	DEPSDIR=$(CURDIR)/release-shared \
+	--no-print-directory -C release-shared \
+	-f $(CURDIR)/Makefile
+
+lib/shared/libdrako3dd.so.1 : lib/shared debug-shared $(SOURCES) $(INCLUDES)
+	@$(MAKE) BUILD=debug-shared OUTPUT=$(CURDIR)/$@ ARCH="$(SWITCH2_SHARED_ARCH)" \
+	BUILD_CFLAGS="-DDEBUG=1 -O2" \
+	DEPSDIR=$(CURDIR)/debug-shared \
+	--no-print-directory -C debug-shared \
+	-f $(CURDIR)/Makefile
+
+lib/shared/nro/libdrako3d.so.1 : lib/shared/libdrako3d.so.1 | lib/shared/nro
+	@elf2nro $< $@
+
+lib/shared/nro/libdrako3dd.so.1 : lib/shared/libdrako3dd.so.1 | lib/shared/nro
+	@elf2nro $< $@
+
+lib/shared/libdrako3d.so : lib/shared/libdrako3d.so.1
+	@echo 'INPUT(libdrako3d.so.1)' > $@
+
+lib/shared/libdrako3dd.so : lib/shared/libdrako3dd.so.1
+	@echo 'INPUT(libdrako3dd.so.1)' > $@
+endif
+
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr release debug lib
+	@rm -fr release debug release-shared debug-shared lib
 
 #---------------------------------------------------------------------------------
 else
@@ -182,7 +235,17 @@ DEPENDS	:=	$(OFILES:.o=.d)
 #---------------------------------------------------------------------------------
 # main targets
 #---------------------------------------------------------------------------------
+# Dynamic linking (Switch 2 only): when OUTPUT is a shared library, link it
+# with the shared specs. ARCH is SWITCH2_SHARED_ARCH from the top-level
+# shared rules (initial-exec TLS, like libounce's libounce.so). Static
+# archives use base_rules' %.a recipe.
+ifneq (,$(findstring .so,$(OUTPUT)))
 $(OUTPUT)	:	$(OFILES)
+	@echo linking $(notdir $@)
+	@$(LD) $(ARCH) -shared -Wl,-soname,$(notdir $@) -specs=$(SWITCH2_SHARED_SPECS) $(OFILES) -o $@
+else
+$(OUTPUT)	:	$(OFILES)
+endif
 
 $(OFILES_SRC)	: $(HFILES)
 
